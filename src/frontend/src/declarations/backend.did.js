@@ -75,14 +75,17 @@ export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'createSubmission' : IDL.Func(
-      [IDL.Nat, IDL.Text, IDL.Text, IDL.Text, ExternalBlob, MediaType],
+      [IDL.Text, IDL.Text, IDL.Text, ExternalBlob, MediaType],
       [],
       [],
     ),
-  'deleteSubmission' : IDL.Func([IDL.Nat], [], []),
+  'deleteSubmissionById' : IDL.Func([IDL.Nat], [], []),
+  'deleteSubmissionByStudentId' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'getAllSubmissions' : IDL.Func([], [IDL.Vec(Submission)], ['query']),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+  'getServerTime' : IDL.Func([], [IDL.Opt(Time)], []),
+  'getStudentIdBySubmission' : IDL.Func([IDL.Nat], [IDL.Text], ['query']),
   'getSubmission' : IDL.Func([IDL.Nat], [Submission], ['query']),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
@@ -91,6 +94,7 @@ export const idlService = IDL.Service({
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+  'userHasSubmission' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], ['query']),
 });
 
 export const idlInitArgs = [];
@@ -160,14 +164,17 @@ export const idlFactory = ({ IDL }) => {
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'createSubmission' : IDL.Func(
-        [IDL.Nat, IDL.Text, IDL.Text, IDL.Text, ExternalBlob, MediaType],
+        [IDL.Text, IDL.Text, IDL.Text, ExternalBlob, MediaType],
         [],
         [],
       ),
-    'deleteSubmission' : IDL.Func([IDL.Nat], [], []),
+    'deleteSubmissionById' : IDL.Func([IDL.Nat], [], []),
+    'deleteSubmissionByStudentId' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'getAllSubmissions' : IDL.Func([], [IDL.Vec(Submission)], ['query']),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+    'getServerTime' : IDL.Func([], [IDL.Opt(Time)], []),
+    'getStudentIdBySubmission' : IDL.Func([IDL.Nat], [IDL.Text], ['query']),
     'getSubmission' : IDL.Func([IDL.Nat], [Submission], ['query']),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
@@ -176,6 +183,7 @@ export const idlFactory = ({ IDL }) => {
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+    'userHasSubmission' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], ['query']),
   });
 };
 

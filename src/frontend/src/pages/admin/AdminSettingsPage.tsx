@@ -1,119 +1,159 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Info, Loader2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useGetAdminSettings, useUpdateAdminSettings } from '../../hooks/useQueries';
+import { Loader2, Save, AlertCircle, Info } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AdminSettingsPage() {
   const { data: settings, isLoading } = useGetAdminSettings();
   const updateSettings = useUpdateAdminSettings();
-  const [captchaEnabled, setCaptchaEnabled] = useState(settings?.captchaEnabled ?? false);
 
-  const handleSaveSettings = async () => {
+  const [captchaEnabled, setCaptchaEnabled] = useState(settings?.captchaEnabled ?? false);
+  const [maxAudioSize, setMaxAudioSize] = useState(settings?.maxAudioSizeMB?.toString() ?? '25');
+  const [maxVideoSize, setMaxVideoSize] = useState(settings?.maxVideoSizeMB?.toString() ?? '25');
+
+  const handleSave = async () => {
     try {
-      await updateSettings.mutateAsync({ captchaEnabled });
+      await updateSettings.mutateAsync({
+        captchaEnabled,
+        maxAudioSizeMB: parseInt(maxAudioSize) || 25,
+        maxVideoSizeMB: parseInt(maxVideoSize) || 25,
+      });
       toast.success('Settings updated successfully');
     } catch (error) {
-      toast.error('Failed to update settings. Backend support required.');
+      console.error('Failed to update settings:', error);
+      toast.error('Failed to update settings. Backend implementation required.');
     }
   };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto" />
+          <p className="text-muted-foreground">Loading settings...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Settings</h1>
+        <h1 className="text-3xl font-bold mb-2">Admin Settings</h1>
         <p className="text-muted-foreground">
-          Configure application settings and preferences
+          Configure system settings and upload limits
         </p>
       </div>
 
       <Alert>
         <Info className="h-4 w-4" />
-        <AlertTitle>Backend Support Required</AlertTitle>
         <AlertDescription>
-          Settings functionality requires backend endpoints for CAPTCHA toggle, email configuration, and other admin preferences. These features will be available once the backend implements the necessary APIs.
+          Note: Settings functionality requires backend implementation. Changes are currently stored client-side only.
         </AlertDescription>
       </Alert>
 
       <Card>
         <CardHeader>
-          <CardTitle>Anti-Spam Settings</CardTitle>
-          <CardDescription>Configure CAPTCHA and rate limiting</CardDescription>
+          <CardTitle>Security Settings</CardTitle>
+          <CardDescription>
+            Configure anti-spam and security features
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label htmlFor="captcha-toggle">Require CAPTCHA Verification</Label>
+              <Label htmlFor="captcha">CAPTCHA Verification</Label>
               <p className="text-sm text-muted-foreground">
-                When enabled, students must complete a verification challenge before submitting
+                Require users to complete a verification challenge before submitting
               </p>
             </div>
             <Switch
-              id="captcha-toggle"
+              id="captcha"
               checked={captchaEnabled}
               onCheckedChange={setCaptchaEnabled}
-              disabled={updateSettings.isPending}
             />
           </div>
 
-          <div className="pt-4 border-t">
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Rate Limit:</span>
-                <span className="font-medium">10 submissions per hour per IP</span>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Rate limiting is enforced by the backend to prevent abuse
-              </p>
-            </div>
+          <div className="space-y-2">
+            <Label>Rate Limiting</Label>
+            <p className="text-sm text-muted-foreground">
+              Maximum submissions per hour: <strong>{settings?.maxSubmissionsPerHour ?? 10}</strong>
+            </p>
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Rate limiting is enforced by the backend and cannot be modified from the UI.
+              </AlertDescription>
+            </Alert>
           </div>
-
-          <Button
-            onClick={handleSaveSettings}
-            disabled={updateSettings.isPending}
-          >
-            {updateSettings.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              'Save Settings'
-            )}
-          </Button>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
           <CardTitle>Upload Limits</CardTitle>
-          <CardDescription>Current file size and duration limits</CardDescription>
+          <CardDescription>
+            Configure maximum file sizes for uploads
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Maximum File Size:</span>
-              <span className="font-medium">25 MB</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Maximum Recording Duration:</span>
-              <span className="font-medium">10 minutes</span>
-            </div>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="maxAudioSize">Maximum Audio File Size (MB)</Label>
+            <Input
+              id="maxAudioSize"
+              type="number"
+              min="1"
+              max="100"
+              value={maxAudioSize}
+              onChange={(e) => setMaxAudioSize(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Current limit: {maxAudioSize}MB
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="maxVideoSize">Maximum Video File Size (MB)</Label>
+            <Input
+              id="maxVideoSize"
+              type="number"
+              min="1"
+              max="100"
+              value={maxVideoSize}
+              onChange={(e) => setMaxVideoSize(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Current limit: {maxVideoSize}MB
+            </p>
           </div>
         </CardContent>
       </Card>
+
+      <div className="flex justify-end">
+        <Button
+          onClick={handleSave}
+          disabled={updateSettings.isPending}
+          size="lg"
+        >
+          {updateSettings.isPending ? (
+            <>
+              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save className="h-5 w-5 mr-2" />
+              Save Settings
+            </>
+          )}
+        </Button>
+      </div>
     </div>
   );
 }

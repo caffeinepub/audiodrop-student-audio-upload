@@ -1,51 +1,93 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-11T02:26:31.835Z",
-  "summary": "Diff adds support for a new mediaType (audio/video) on submissions, introduces video file validation utilities, updates admin views to handle video via a new player/download button, and updates the student upload page to track both audio and video files. Some acceptance-criteria details (notably correct filename/extension/MIME handling for varied video formats and confirmed frontend payload selection logic) are not fully evidenced in the truncated diff summary. The diff also introduces an unrequested Motoko migration module, which may violate the stated constraint about keeping Motoko logic in a single actor file.",
+  "generatedAt": "2026-02-11T05:21:37.664Z",
+  "summary": "Diff primarily changes frontend behavior (audio-only public upload UX, minimal success page, and a new client-side admin session/login helper). No backend/main.mo changes are shown, so backend requirements for public submission creation, admin-only protections, and server-side validation/rate limiting/private media storage are not evidenced as implemented.",
   "missing_requirements": [
     {
-      "id": "REQ-31",
-      "requirement": "Update the Student Upload submission call to send the correct media payload (audio or video) to the backend, based on what the student provided.",
-      "reason": "StudentUploadPage.tsx is truncated before the submit logic shows which of {audioFile, videoFile} is converted to an ExternalBlob and sent, so it’s not verifiable from the provided diff summary that video bytes are sent when video is uploaded (and that audio is not required in that path), nor that upload progress works for both.",
+      "id": "REQ-73",
+      "requirement": "Make submission creation fully public by removing AccessControl permission requirement from createSubmission() so unauthenticated callers can submit; store submittedBy as null/equivalent when not authenticated.",
+      "reason": "No backend changes are included in the diff summary; createSubmission() backend authorization behavior and submittedBy storage are not shown as updated.",
       "evidence": [
-        "frontend/src/pages/StudentUploadPage.tsx (truncated)"
+        "File diff summary shows no backend/main.mo changes (only frontend files modified).",
+        "frontend/src/hooks/useQueries.ts (still calls actor.createSubmission but does not show backend auth removal)"
       ]
     },
     {
-      "id": "REQ-32",
-      "requirement": "Download filename/extension is appropriate for the stored media type.",
-      "reason": "The admin download/filename logic appears hard-coded: SubmissionDetailsPage uses `.mp4` for any video submission, while AdminMediaDownloadButton hard-codes the MIME type to `video/webm` for video downloads. This does not reflect the accepted video formats (mp4/webm/mov/avi/mkv) and may produce mismatched extensions/MIME for non-webm video uploads.",
+      "id": "REQ-74",
+      "requirement": "Preserve strict admin-only protection for all submission access/admin operations (list/view/download/delete/export/settings/audit) and reject non-admin callers with English unauthorized errors.",
+      "reason": "No backend authorization checks are shown/updated; frontend-only route/session gating does not satisfy backend enforcement required by the spec.",
       "evidence": [
-        "frontend/src/pages/admin/SubmissionDetailsPage.tsx",
-        "frontend/src/components/admin/AdminMediaDownloadButton.tsx",
-        "frontend/src/lib/videoValidation.ts"
+        "File diff summary shows no backend/main.mo changes (only frontend files modified).",
+        "frontend/src/lib/adminApi.ts (implements client-side sessionStorage admin session, not backend enforcement)"
+      ]
+    },
+    {
+      "id": "REQ-75",
+      "requirement": "Add server-side validation/hardening for public submission creation: required fields, media allowlist (block executable/unknown), max size 25MB, duration limits if supported, and rate limiting 10 submissions/hour per caller fingerprint.",
+      "reason": "Only client-side validation is evidenced (e.g., audio validation utilities and StudentUploadPage checks). No server-side/backend validation or rate limiting changes are shown.",
+      "evidence": [
+        "frontend/src/pages/StudentUploadPage.tsx (client-side required field checks and audio validation usage)",
+        "frontend-file-summaries.txt (mentions client-side audio validation; no backend validation/rate limiting changes evidenced)",
+        "File diff summary shows no backend/main.mo changes"
+      ]
+    },
+    {
+      "id": "REQ-76",
+      "requirement": "Store uploaded media privately and do not expose public URLs; any media retrieval must be admin authorized; createSubmission response must not include publicly accessible media URL.",
+      "reason": "No backend storage/privacy or media retrieval authorization changes are shown in the diff summary, so the required backend guarantees are not evidenced.",
+      "evidence": [
+        "File diff summary shows no backend/main.mo changes"
+      ]
+    },
+    {
+      "id": "REQ-77",
+      "requirement": "Ensure student public upload flow works end-to-end without requiring login/auth, and after success show only the exact message with no identifiers/links/playback and no way to re-access submissions.",
+      "reason": "The success-page message requirement appears implemented, but the diff does not conclusively show that the end-to-end upload works without any authentication dependency (useActor/identity behavior not shown here) or that no other student routes/links exist; evidence is partial.",
+      "evidence": [
+        "frontend/src/pages/SubmissionSuccessPage.tsx (shows only the exact message)",
+        "frontend/src/hooks/useQueries.ts (useCreateSubmission depends on useActor; whether unauthenticated actor calls work is not evidenced here)"
+      ]
+    },
+    {
+      "id": "REQ-78",
+      "requirement": "Align media policy: if audio-only, remove/disable video in student UI and backend must reject mediaType=#video; otherwise backend must enforce allowlists for supported media types and block unknown/executable types.",
+      "reason": "Frontend appears to move toward audio-only, but there is no evidence of a backend rejection for #video or backend allowlist enforcement changes.",
+      "evidence": [
+        "frontend/src/pages/StudentUploadPage.tsx (audio-only flow shown; uses isValidAudioFile and MediaType)",
+        "frontend/src/lib/videoValidation.ts (marked deprecated for public upload)",
+        "File diff summary shows no backend/main.mo changes"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Added a Motoko migration module and wired it into the backend actor via `(with migration = Migration.run)`.",
-      "reason": "The BuildRequest did not request data migrations or a separate Motoko module; it also explicitly constrained Motoko logic to remain in a single backend actor file (backend/main.mo).",
+      "description": "Client-side admin authentication/session system using hardcoded credentials and sessionStorage (adminApi + useAdminSession), effectively adding a frontend-only auth mechanism not requested by the BuildRequest (and not a backend-enforced protection).",
+      "reason": "The BuildRequest focuses on making student submissions public while keeping *backend* admin-only access enforced. Implementing a new frontend sessionStorage-based admin auth flow is not explicitly requested and does not satisfy the requirement for backend authorization enforcement.",
       "evidence": [
-        "backend/migration.mo",
-        "backend/main.mo"
+        "frontend/src/lib/adminApi.ts",
+        "frontend/src/hooks/useQueries.ts (useAdminSession)",
+        "frontend/src/components/AppShell.tsx (shows admin nav based on session)"
+      ]
+    },
+    {
+      "description": "Audit Log UI copy stating backend implementation is required and that no events are tracked.",
+      "reason": "BuildRequest requires admin-only protection for audit-log access, but does not request adding/altering audit-log UI messaging or implementing placeholder audit-log screens in this change set.",
+      "evidence": [
+        "frontend/src/pages/admin/AuditLogPage.tsx"
       ]
     }
   ],
-  "confidence": 0.62,
+  "confidence": 0.74,
   "changed_files": [
-    "backend/main.mo",
-    "backend/migration.mo",
     "frontend-file-summaries.txt",
-    "frontend/src/components/AudioRecorder.tsx",
-    "frontend/src/components/admin/AdminMediaDownloadButton.tsx",
-    "frontend/src/components/admin/AdminVideoPlayer.tsx",
+    "frontend/src/components/AppShell.tsx",
     "frontend/src/hooks/useQueries.ts",
+    "frontend/src/lib/adminApi.ts",
     "frontend/src/lib/videoValidation.ts",
     "frontend/src/pages/StudentUploadPage.tsx",
-    "frontend/src/pages/admin/AdminDashboardPage.tsx",
-    "frontend/src/pages/admin/SubmissionDetailsPage.tsx",
+    "frontend/src/pages/SubmissionSuccessPage.tsx",
+    "frontend/src/pages/admin/AuditLogPage.tsx",
     "project_state.json"
   ]
 }

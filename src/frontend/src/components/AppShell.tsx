@@ -1,102 +1,81 @@
-import { ReactNode } from 'react';
-import { useNavigate, useRouterState } from '@tanstack/react-router';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { useQueryClient } from '@tanstack/react-query';
+import { Link, useLocation } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
-import { Music, LogOut, LayoutDashboard, Settings, FileText } from 'lucide-react';
-import { SiCaffeine } from 'react-icons/si';
-import { clearAdminSession } from '../lib/adminSession';
-import { clearCsrfToken } from '../lib/csrf';
+import { useAdminSession } from '../hooks/useQueries';
+import { Music, Settings, FileText, LogOut } from 'lucide-react';
 
-interface AppShellProps {
-  children: ReactNode;
-}
+export default function AppShell({ children }: { children: React.ReactNode }) {
+  const location = useLocation();
+  const { data: session, logout } = useAdminSession();
+  const isAuthenticated = !!session;
 
-export default function AppShell({ children }: AppShellProps) {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { identity, clear } = useInternetIdentity();
-  const routerState = useRouterState();
-  const isAuthenticated = !!identity;
-  const isAdminRoute = routerState.location.pathname.startsWith('/admin');
+  // Hide header and footer on success page
+  const isSuccessPage = location.pathname === '/success';
 
   const handleLogout = async () => {
-    await clear();
-    clearAdminSession();
-    clearCsrfToken();
-    queryClient.clear();
-    navigate({ to: '/' });
+    try {
+      await logout.mutateAsync();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
-  const appIdentifier = typeof window !== 'undefined' 
-    ? encodeURIComponent(window.location.hostname)
-    : 'audiodrop-app';
+  if (isSuccessPage) {
+    return (
+      <div className="min-h-screen bg-background">
+        <main className="container mx-auto px-4 py-8">
+          {children}
+        </main>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <header className="border-b border-border bg-card">
+    <div className="min-h-screen bg-background flex flex-col">
+      <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <button
-              onClick={() => navigate({ to: '/' })}
-              className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-            >
-              <img 
-                src="/assets/generated/audiodrop-logo.dim_512x512.png" 
-                alt="AudioDrop Logo" 
-                className="h-10 w-10"
-              />
-              <div className="flex flex-col items-start">
-                <h1 className="text-xl font-bold text-foreground">AudioDrop</h1>
-                <p className="text-xs text-muted-foreground">Student Audio Upload</p>
-              </div>
-            </button>
+            <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <Music className="h-6 w-6 text-primary" />
+              <span className="text-xl font-bold">AudioDrop</span>
+            </Link>
 
-            <nav className="flex items-center gap-2">
-              {isAdminRoute && isAuthenticated && (
+            <nav className="flex items-center gap-4">
+              {isAuthenticated ? (
                 <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate({ to: '/admin/dashboard' })}
-                  >
-                    <LayoutDashboard className="h-4 w-4 mr-2" />
-                    Dashboard
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate({ to: '/admin/audit-log' })}
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Audit Log
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate({ to: '/admin/settings' })}
-                  >
-                    <Settings className="h-4 w-4 mr-2" />
-                    Settings
-                  </Button>
+                  <Link to="/admin/dashboard">
+                    <Button variant="ghost" size="sm">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Dashboard
+                    </Button>
+                  </Link>
+                  <Link to="/admin/audit">
+                    <Button variant="ghost" size="sm">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Audit
+                    </Button>
+                  </Link>
+                  <Link to="/admin/settings">
+                    <Button variant="ghost" size="sm">
+                      <Settings className="h-4 w-4 mr-2" />
+                      Settings
+                    </Button>
+                  </Link>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleLogout}
+                    disabled={logout.isPending}
                   >
                     <LogOut className="h-4 w-4 mr-2" />
                     Logout
                   </Button>
                 </>
-              )}
-              {!isAdminRoute && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate({ to: '/admin/login' })}
-                >
-                  Admin Login
-                </Button>
+              ) : (
+                <Link to="/admin/login">
+                  <Button variant="outline" size="sm">
+                    Admin Login
+                  </Button>
+                </Link>
               )}
             </nav>
           </div>
@@ -107,26 +86,23 @@ export default function AppShell({ children }: AppShellProps) {
         {children}
       </main>
 
-      <footer className="border-t border-border bg-card mt-auto">
+      <footer className="border-t bg-card mt-auto">
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <Music className="h-4 w-4" />
-              <span>© {new Date().getFullYear()} AudioDrop</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span>Built with</span>
-              <SiCaffeine className="h-4 w-4 text-amber-600" />
-              <span>using</span>
+            <p>© {new Date().getFullYear()} AudioDrop. All rights reserved.</p>
+            <p>
+              Built with ❤️ using{' '}
               <a
-                href={`https://caffeine.ai/?utm_source=Caffeine-footer&utm_medium=referral&utm_content=${appIdentifier}`}
+                href={`https://caffeine.ai/?utm_source=Caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(
+                  typeof window !== 'undefined' ? window.location.hostname : 'audiodrop'
+                )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-medium hover:underline"
+                className="text-primary hover:underline"
               >
                 caffeine.ai
               </a>
-            </div>
+            </p>
           </div>
         </div>
       </footer>

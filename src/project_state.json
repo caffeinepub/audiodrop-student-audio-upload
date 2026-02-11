@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 7,
-  "summary": "AudioDrop – Student Audio Upload: a full-stack web app where students submit audio with required metadata via a public upload page; students can never view/play/download or re-access submissions. A single authenticated admin account (“OP Admin”) can securely log in to review/search/filter submissions, play back and download audio (including bulk ZIP), export metadata CSV, and optionally delete with audit logging. Audio files are stored privately in object storage with signed/authenticated access; server-side validation, rate limiting, and optional email notifications are included. After upload, show only a generic success message (no playback, filename, download link, or re-access).",
+  "projectStateVersion": 27,
+  "summary": "AudioDrop – Student Audio Upload: a full-stack web app where students submit audio with required metadata via a fully public upload page (no student authentication required); students can never view/play/download or re-access submissions. A single authenticated admin can securely log in to review/search/filter submissions, play back and download audio (including bulk ZIP), export metadata CSV, and optionally delete with audit logging. Audio files are stored privately in object storage with signed/authenticated access; server-side validation, rate limiting, and optional email notifications are included. After upload, show only a generic success message (no playback, filename, download link, or re-access). Current direction for admin auth: a single hardcoded admin account (username \"OP Admin\", password \"Hellyea11\"), `POST /api/admin/login` accepts `{ username, password }`, creates a session with `role=\"admin\"` on match, and middleware guards all `/admin/*`, `/api/admin/*`, and any audio download endpoints by requiring `session.role === \"admin\"`; logout clears the session.",
   "architectural_notes": [
     "Audio files stored in secure/private object storage; avoid storing raw audio blobs in the database.",
     "Downloads should require signed URLs or authenticated backend endpoints; files must not be publicly accessible.",
@@ -14,8 +14,15 @@
     "Student success state must display only a generic confirmation message; do not show playback, filename, download link, or allow re-access to the submission.",
     "Admin access is a single account named “OP Admin”; password must not be hard-coded and must be set via first-time setup and/or environment variables, and stored with strong hashing (bcrypt/argon2)."
   ],
-  "known_issues": [],
-  "isFixRequest": false,
+  "known_issues": [
+    "Admin login/access still not behaving correctly; user reports they are still seeing an issue when logged in as admin.",
+    "Admin Authorization Token / bootstrap screen is still appearing (app stuck in bootstrap mode) instead of showing only the normal admin email/password login after initial one-time setup.",
+    "Admin password one-time setup screen shows a message indicating backend implementation is required (setup cannot complete / password not saved).",
+    "Admin password setup/login flow currently blocked because backend admin-auth APIs are missing; user requests replacing with simple env-var-based login to remove the placeholder error and allow dashboard access.",
+    "Student upload form currently indicates “Media Upload * … at least one is required”; user requests this not be mandatory because students can record and upload audio (recording should satisfy the requirement / mandatory indicator text needs adjustment).",
+    "Public student uploads currently fail because createSubmission enforces AccessControl.hasPermission(...,#user) and traps for unauthenticated callers; must be removed to allow public submissions."
+  ],
+  "isFixRequest": true,
   "existing_features": [
     {
       "id": "feature-create-a-public-student-upload-flow-with-a-dedicated-page-that-includes-1-title-short-instructions-2-required-form-fields-full-name-student-id-course-assessment-task-email-3-required-audio-file-input-accepting-only-m4a-mp3-wav-webm-ogg-4-optional-in-browser-audio-recorder-when-supported-with-start-stop-timer-playback-re-record-then-attach-recording-as-a-file-5-required-checkbox-i-confirm-this-is-my-own-work-6-submit-button-disabled-until-all-required-fields-audio-are-present-7-upload-progress-ui-and-8-friendly-accessible-validation-error-messaging",
@@ -224,6 +231,238 @@
         "REQ-32"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-fix-the-admin-access-flow-so-that-when-a-user-completes-the-admin-login-flow-the-app-consistently-recognizes-them-as-an-admin-i-e-iscalleradmin-returns-true-and-adminrouteguard-no-longer-shows-access-denied-for-the-authenticated-admin-user",
+      "title": "Fix the admin access flow so that when a user completes the Admin Login flow, the app consistently recognizes them as an admin (i.e., `isCallerAdmin()` returns true) and AdminRouteGuard no longer shows “Access Denied” for the authenticated admin user.",
+      "reqIds": [
+        "REQ-33"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-admin-login-ux-to-explicitly-handle-the-admin-bootstrap-authorization-secret-required-by-the-backend-initialization-step-initializeaccesscontrolwithsecret-so-admins-are-not-logged-in-without-actually-being-granted-admin-privileges",
+      "title": "Update the Admin Login UX to explicitly handle the admin bootstrap/authorization secret required by the backend initialization step (`_initializeAccessControlWithSecret`) so admins are not “logged in” without actually being granted admin privileges.",
+      "reqIds": [
+        "REQ-34"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-adjust-the-header-admin-navigation-rendering-so-it-does-not-imply-admin-access-merely-because-the-user-is-authenticated-and-currently-on-an-admin-route-admin-navigation-controls-must-only-be-shown-when-the-user-is-actually-authorized-as-admin",
+      "title": "Adjust the header/admin navigation rendering so it does not imply admin access merely because the user is authenticated and currently on an /admin route; admin navigation controls must only be shown when the user is actually authorized as admin.",
+      "reqIds": [
+        "REQ-35"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-remove-the-admin-authorization-required-admin-token-bootstrap-ui-from-the-admin-login-experience-so-the-app-never-prompts-for-an-admin-authorization-token-including-removing-any-dependency-on-the-caffeineadmintoken-session-parameter",
+      "title": "Remove the “Admin Authorization Required” / admin token bootstrap UI from the Admin Login experience so the app never prompts for an admin authorization token (including removing any dependency on the `caffeineAdminToken` session parameter).",
+      "reqIds": [
+        "REQ-37"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-a-one-time-admin-credentials-setup-flow-that-runs-only-when-admin-credentials-are-not-yet-initialized-after-initialization-the-app-must-only-show-a-login-form-no-credential-creation-prompts",
+      "title": "Implement a one-time admin credentials setup flow that runs only when admin credentials are not yet initialized; after initialization, the app must only show a login form (no credential creation prompts).",
+      "reqIds": [
+        "REQ-38"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-frontend-admin-session-handling-to-support-the-new-one-time-setup-login-flow-and-remove-stale-logic-that-refetches-admin-status-based-on-the-legacy-token-value",
+      "title": "Update frontend admin session handling to support the new one-time setup + login flow and remove stale logic that refetches admin status based on the legacy token value.",
+      "reqIds": [
+        "REQ-40"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-wire-the-frontend-react-query-hooks-to-the-new-backend-admin-auth-methods-remove-placeholders-that-always-return-false-or-throw-so-the-admin-login-page-can-complete-one-time-password-setup-and-subsequent-password-logins-without-showing-backend-implementation-required-errors",
+      "title": "Wire the frontend React Query hooks to the new backend admin-auth methods (remove placeholders that always return false or throw), so the Admin Login page can complete one-time password setup and subsequent password logins without showing “backend implementation required” errors.",
+      "reqIds": [
+        "REQ-43"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-the-end-to-end-admin-access-check-behaves-consistently-after-setup-login-so-protected-admin-routes-do-not-show-access-denied-for-a-successfully-authenticated-admin-adminrouteguard-must-allow-access-when-iscalleradmin-is-true",
+      "title": "Ensure the end-to-end admin access check behaves consistently after setup/login so protected admin routes do not show “Access Denied” for a successfully authenticated admin; AdminRouteGuard must allow access when `isCallerAdmin()` is true.",
+      "reqIds": [
+        "REQ-44"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-refactor-the-admin-login-page-ui-to-be-a-simple-email-password-form-remove-the-current-one-time-password-setup-dialogs-profile-setup-prompts-and-any-internet-identity-driven-already-authenticated-messaging",
+      "title": "Refactor the Admin Login page UI to be a simple email + password form (remove the current one-time password setup dialogs, profile setup prompts, and any Internet Identity-driven \"already authenticated\" messaging).",
+      "reqIds": [
+        "REQ-49"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-wire-the-admin-login-page-to-call-post-api-admin-login-with-email-password-and-on-success-redirect-to-admin-dashboard-on-failure-show-a-generic-english-error-message-do-not-reveal-which-field-was-incorrect",
+      "title": "Wire the Admin Login page to call `POST /api/admin/login` with `{ email, password }` and, on success, redirect to `/admin/dashboard`; on failure, show a generic English error message (do not reveal which field was incorrect).",
+      "reqIds": [
+        "REQ-50"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-admin-route-protection-in-the-spa-so-that-admin-dashboard-admin-audit-log-audit-page-and-admin-settings-are-accessible-only-when-the-admin-session-cookie-indicates-the-user-is-an-admin-otherwise-redirect-the-user-to-admin-login-or-show-an-english-access-denied-state-consistent-with-the-requirement",
+      "title": "Update admin route protection in the SPA so that `/admin/dashboard`, `/admin/audit-log` (audit page), and `/admin/settings` are accessible only when the admin session cookie indicates the user is an admin; otherwise redirect the user to `/admin/login` (or show an English \"Access Denied\" state consistent with the requirement).",
+      "reqIds": [
+        "REQ-51"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-frontend-logout-so-it-clears-the-admin-cookie-session-and-then-navigates-away-from-admin-pages-e-g-redirect-to-ensuring-admin-routes-become-inaccessible-until-logging-in-again",
+      "title": "Implement frontend logout so it clears the admin cookie/session and then navigates away from admin pages (e.g., redirect to `/`), ensuring admin routes become inaccessible until logging in again.",
+      "reqIds": [
+        "REQ-52"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-no-passwords-or-password-hashes-are-ever-written-to-logs-including-error-logs-during-the-admin-login-flow",
+      "title": "Ensure no passwords or password hashes are ever written to logs (including error logs) during the admin login flow.",
+      "reqIds": [
+        "REQ-55"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-replace-the-plaintext-admin-password-configuration-with-a-bcrypt-hash-configuration-remove-any-dependency-on-an-admin-password-environment-variable-and-instead-require-admin-password-hash-bcrypt",
+      "title": "Replace the plaintext admin password configuration with a bcrypt hash configuration: remove any dependency on an `ADMIN_PASSWORD` environment variable and instead require `ADMIN_PASSWORD_HASH` (bcrypt).",
+      "reqIds": [
+        "REQ-56"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-admin-login-verification-logic-to-compare-the-submitted-password-to-admin-password-hash-using-a-bcrypt-compare-operation-never-equality-check-the-password-against-a-plaintext-value-preserve-the-existing-successful-login-cookie-behavior-by-continuing-to-set-the-session-cookie-exactly-as-isadmin-true-on-success",
+      "title": "Update the admin login verification logic to compare the submitted password to `ADMIN_PASSWORD_HASH` using a bcrypt compare operation (never equality-check the password against a plaintext value). Preserve the existing successful-login cookie behavior by continuing to set the session cookie exactly as `isAdmin=true` on success.",
+      "reqIds": [
+        "REQ-57"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-no-passwords-or-password-hashes-are-ever-written-to-logs-including-debug-error-logs-during-the-admin-login-flow",
+      "title": "Ensure no passwords or password hashes are ever written to logs (including debug/error logs) during the admin login flow.",
+      "reqIds": [
+        "REQ-58"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-frontend-replace-the-current-client-side-simulated-admin-authentication-bcrypt-hash-client-set-cookie-with-real-network-calls-to-the-backend-endpoints-specifically-the-admin-login-page-must-call-post-api-admin-login-with-email-password",
+      "title": "Frontend: Replace the current client-side simulated admin authentication (bcrypt/hash + client-set cookie) with real network calls to the backend endpoints. Specifically, the Admin Login page must call `POST /api/admin/login` with `{ email, password }`.",
+      "reqIds": [
+        "REQ-62"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-frontend-update-admin-login-failure-handling-to-show-the-exact-english-message-invalid-admin-credentials-when-api-admin-login-returns-401-or-ok-false-on-success-redirect-to-admin-dashboard",
+      "title": "Frontend: Update Admin Login failure handling to show the exact English message \"Invalid admin credentials\" when `/api/admin/login` returns 401 or `{ ok: false }`. On success, redirect to `/admin/dashboard`.",
+      "reqIds": [
+        "REQ-63"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-frontend-implement-logout-to-call-api-admin-logout-then-redirect-to-home-ensure-admin-only-ui-and-routes-become-inaccessible-after-logout",
+      "title": "Frontend: Implement logout to call `/api/admin/logout`, then redirect to home (`/`). Ensure admin-only UI and routes become inaccessible after logout.",
+      "reqIds": [
+        "REQ-64"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-frontend-ensure-admin-route-protection-covers-admin-dashboard-admin-settings-and-the-audit-page-route-currently-implemented-in-the-app-admin-audit-log-the-protection-must-be-based-on-the-admin-role-from-the-session-cookie-not-merely-client-side-auth-state-if-not-admin-show-access-denied-or-redirect-to-admin-login-english",
+      "title": "Frontend: Ensure admin route protection covers `/admin/dashboard`, `/admin/settings`, and the audit page route currently implemented in the app (`/admin/audit-log`). The protection must be based on the admin role from the session cookie (not merely client-side auth state). If not admin, show \"Access Denied\" or redirect to `/admin/login` (English).",
+      "reqIds": [
+        "REQ-65"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-remove-all-environment-variable-based-admin-authentication-logic-and-replace-it-with-a-single-hardcoded-admin-account-with-the-exact-credentials-username-op-admin-and-password-hellyea11",
+      "title": "Remove all environment-variable based admin authentication logic and replace it with a single hardcoded admin account with the exact credentials: username \"OP Admin\" and password \"Hellyea11\".",
+      "reqIds": [
+        "REQ-66"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-simulated-admin-login-api-to-match-the-requested-contract-for-post-api-admin-login-accept-username-password-and-when-username-op-admin-and-password-hellyea11-create-an-authenticated-session-with-role-admin-and-return-success-otherwise-return-an-unauthorized-result-that-the-ui-treats-as-401",
+      "title": "Update the simulated admin login API to match the requested contract for `POST /api/admin/login`: accept `{ username, password }`, and when `username === \"OP Admin\"` and `password === \"Hellyea11\"`, create an authenticated session with `role=\"admin\"` and return success; otherwise return an Unauthorized result that the UI treats as 401.",
+      "reqIds": [
+        "REQ-67"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-admin-login-page-ui-to-use-a-username-field-not-email-and-a-password-field-and-wire-submission-to-the-updated-login-call-that-uses-username-password",
+      "title": "Update the Admin Login page UI to use a Username field (not email) and a Password field, and wire submission to the updated login call that uses `{ username, password }`.",
+      "reqIds": [
+        "REQ-68"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-remove-any-admin-auth-related-ui-messaging-that-says-or-implies-admin-password-setup-requires-backend-implementation-and-ensure-the-admin-login-experience-does-not-mention-backend-implementation-requirements-for-admin-password-setup",
+      "title": "Remove any admin-auth related UI messaging that says (or implies) \"Admin password setup requires backend implementation\" and ensure the Admin Login experience does not mention backend implementation requirements for admin password setup.",
+      "reqIds": [
+        "REQ-69"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-protect-all-admin-pages-in-the-spa-by-requiring-an-authenticated-admin-session-with-session-role-admin-including-admin-dashboard-admin-settings-and-the-audit-page-route-update-routing-so-the-audit-page-is-available-at-admin-audit-as-requested-either-by-changing-the-route-or-adding-an-alias-that-serves-the-same-page",
+      "title": "Protect all admin pages in the SPA by requiring an authenticated admin session with `session.role === \"admin\"`, including `/admin/dashboard`, `/admin/settings`, and the audit page route. Update routing so the audit page is available at `/admin/audit` as requested (either by changing the route or adding an alias that serves the same page).",
+      "reqIds": [
+        "REQ-70"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-logout-clears-the-admin-session-so-that-admin-only-routes-and-admin-ui-become-inaccessible-immediately-after-logout",
+      "title": "Ensure logout clears the admin session so that admin-only routes and admin UI become inaccessible immediately after logout.",
+      "reqIds": [
+        "REQ-71"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-student-upload-page-media-section-copy-so-it-does-not-imply-the-user-must-upload-a-file-when-they-can-record-audio-in-the-browser-specifically-adjust-the-media-upload-card-title-description-to-clearly-state-that-the-student-may-either-a-upload-an-audio-file-b-record-audio-in-the-browser-or-c-upload-a-video-file-and-that-at-least-one-of-those-options-is-required-recording-counts-as-fulfilling-the-requirement-remove-the-misleading-mandatory-indicator-the-asterisk-from-the-media-upload-section-heading-if-it-implies-file-upload-is-mandatory",
+      "title": "Update the Student Upload page media section copy so it does not imply the user must upload a file when they can record audio in the browser. Specifically, adjust the \"Media Upload\" card title/description to clearly state that the student may either (a) upload an audio file, (b) record audio in the browser, or (c) upload a video file, and that at least one of those options is required (recording counts as fulfilling the requirement). Remove the misleading mandatory indicator (the asterisk) from the \"Media Upload\" section heading if it implies \"file upload is mandatory\".",
+      "reqIds": [
+        "REQ-72"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-frontend-ensure-the-student-public-upload-flow-works-end-to-end-without-requiring-any-login-authentication-and-continue-to-show-only-generic-post-submission-success-ux-no-playback-no-filename-no-download-link-no-submission-id-timestamps-and-no-way-to-re-access-the-submission",
+      "title": "Frontend: Ensure the student public upload flow works end-to-end without requiring any login/authentication, and continue to show only generic post-submission success UX (no playback, no filename, no download link, no submission ID/timestamps, and no way to re-access the submission).",
+      "reqIds": [
+        "REQ-77"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-media-policy-alignment-update-the-public-upload-ux-and-submission-payload-to-match-the-backend-s-intended-public-upload-media-policy-if-public-uploads-are-intended-to-be-audio-only-remove-disable-video-submission-in-the-student-upload-ui-and-ensure-the-backend-rejects-video-submissions-otherwise-ensure-backend-validation-covers-both-supported-media-types-without-allowing-executable-unknown-types",
+      "title": "Media policy alignment: Update the public upload UX and submission payload to match the backend’s intended public-upload media policy. If public uploads are intended to be audio-only, remove/disable video submission in the student upload UI and ensure the backend rejects `#video` submissions; otherwise, ensure backend validation covers both supported media types without allowing executable/unknown types.",
+      "reqIds": [
+        "REQ-78"
+      ],
+      "version": 1
     }
   ],
   "new_feature_requests": [
@@ -338,6 +577,88 @@
       "summary": "Extend the backend public submission API to accept either audio or video content, and persist which media type was submitted for each submission.",
       "reqIds": [
         "REQ-30"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-30",
+      "summary": "Ensure the backend exposes and uses a stable admin-check API compatible with the frontend (`isCallerAdmin()`), and ensure the access-control initialization path required for granting admin privileges is present and functional.",
+      "reqIds": [
+        "REQ-36"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-33",
+      "summary": "Ensure admin authentication is password-based with secure hashing and that admin-only backend methods (including `isCallerAdmin()`) rely on the authenticated admin session rather than any bootstrap token or Internet Identity-only state.",
+      "reqIds": [
+        "REQ-39"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-34",
+      "summary": "Implement the missing backend admin-authentication APIs required by the frontend one-time password setup + password login flow: `isAdminCredentialsInitialized()`, `setupAdminPassword(password)`, `adminLogin(password)`, `adminLogout()`, and ensure `isCallerAdmin()` reflects the authenticated admin session (not just Internet Identity authentication).",
+      "reqIds": [
+        "REQ-41"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-35",
+      "summary": "Add or update backend stable state to persist admin credential initialization state and password hash across upgrades, and create/modify `backend/migration.mo` only if required to preserve existing canister state under the project’s conditional migration policy.",
+      "reqIds": [
+        "REQ-42"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-47",
+      "summary": "Replace admin auth with a single hardcoded admin account (OP Admin / Hellyea11): remove env-var logic and setup placeholder message; update POST /api/admin/login to accept {username,password} and create session role=admin; protect /admin/*, /api/admin/*, /admin/dashboard, /admin/audit, /admin/settings, and audio download endpoints via middleware requiring session.role=admin; ensure logout clears session; update admin login UI to username+password.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-48",
+      "summary": "Student upload UX: adjust the “Media Upload * (at least one required)” requirement so it is not shown/treated as mandatory when the student uses the in-browser audio recorder (i.e., recording satisfies the requirement); remove or revise the mandatory indicator/text accordingly.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-49",
+      "summary": "Fix public student uploads by removing the AccessControl/#user permission requirement from createSubmission (and related submission-create endpoints) so submissions succeed without login, while keeping all admin list/view/play/download/delete/export/settings/audit endpoints strictly admin-only with existing session.role=admin guards and retaining server-side validation + rate limiting + private storage.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-50",
+      "summary": "Backend: Make submission creation fully public by removing the AccessControl permission requirement from `createSubmission()` (and any other submission-create entrypoints), so unauthenticated callers can submit successfully without trapping.",
+      "reqIds": [
+        "REQ-73"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-51",
+      "summary": "Backend: Preserve strict admin-only protection for all submission access and admin operations. Ensure all endpoints/methods that list/view/play/download/delete submissions, generate download links, bulk ZIP export, admin settings, and admin audit log enforce admin authorization and reject non-admin callers.",
+      "reqIds": [
+        "REQ-74"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-52",
+      "summary": "Backend: Keep server-side validation and hardening on public submission creation. Validate required fields (`fullName`, `studentId`, `course`, `assessment`, `email`) and validate the uploaded media (type allowlist, block executable/unknown types, enforce max size 25MB, enforce duration limits if supported, and enforce rate limiting of 10 submissions/hour per IP or the closest available caller fingerprint on the platform).",
+      "reqIds": [
+        "REQ-75"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-53",
+      "summary": "Backend: Store uploaded media privately and do not expose any public URLs for student uploads. Ensure that any media retrieval mechanism requires admin authorization and does not provide publicly accessible links.",
+      "reqIds": [
+        "REQ-76"
       ],
       "status": "pending"
     }

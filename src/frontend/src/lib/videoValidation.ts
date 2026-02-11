@@ -1,3 +1,6 @@
+// Video validation utilities - deprecated for public student upload
+// Kept for potential admin-only use cases
+
 export const ALLOWED_VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov', '.avi', '.mkv'];
 export const ALLOWED_VIDEO_MIME_TYPES = [
   'video/mp4',
@@ -13,6 +16,8 @@ export interface VideoValidationResult {
   error?: string;
 }
 
+// Note: This function is no longer used in the public student upload flow
+// Students can only submit audio files
 export function isValidVideoFile(file: File): VideoValidationResult {
   // Check file size
   if (file.size > MAX_VIDEO_SIZE) {

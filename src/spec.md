@@ -1,14 +1,14 @@
 # Specification
 
 ## Summary
-**Goal:** Allow students to submit either an audio file or a video file (at least one required), and ensure admins can view/play back the correct media type.
+**Goal:** Allow unauthenticated students to submit recordings from the public upload page while keeping all submission viewing/downloading and admin operations strictly admin-only.
 
 **Planned changes:**
-- Update the Student Upload form UI to support video file uploads alongside existing audio upload/recording, with validation enforcing at least one of {audio, video}.
-- Update user-facing copy (English) to clarify that audio is not mandatory when a video is uploaded, and show accepted video formats and the 25MB max size near the video input.
-- Add client-side video validation (allowed types + 25MB max) while keeping existing audio validation unchanged.
-- Update the submission request logic to send either audio bytes or video bytes (with upload progress preserved) based on what the student provided.
-- Extend the backend public submission API to accept audio and/or video, reject submissions with neither, and persist the submitted media type and associated blob reference.
-- Update admin submission details to handle video submissions (video playback UI or clear message + download), while preserving existing audio playback and protected media access via backend calls.
+- Backend: Remove AccessControl permission requirements from `createSubmission()` (and any submission-create entrypoints) so unauthenticated callers can create submissions; store `submittedBy` as `null` (or equivalent) when no principal is available.
+- Backend: Ensure all submission access and admin operations remain admin-only (list/view/details, play/stream/download, generate download links, bulk ZIP export, delete, settings, audit log) and return clear English unauthorized errors for non-admin callers.
+- Backend: Keep/strengthen server-side validation for public submissions (required metadata fields, media allowlist with executable/unknown blocked, max size 25MB, duration limits if supported, and rate limiting ~10 submissions/hour per caller fingerprint/IP).
+- Backend: Store uploaded media privately and ensure no public URLs/links are returned from public submission creation; any media retrieval remains admin-only.
+- Frontend: Ensure the student public upload flow works end-to-end without login and, on success, shows only “Your recording has been submitted successfully.” with no playback, filename, download link, submission ID, timestamps, or any way to retrieve prior submissions.
+- Media policy alignment (frontend + backend): Align to intended policy by either making the student flow audio-only (disable video UI and reject `#video` submissions) or, if audio+video remains supported, enforce explicit allowlists per media type.
 
-**User-visible outcome:** Students can submit a project using either an audio file or a video file (without needing audio when video is provided), and admins can correctly play or download the submitted media type.
+**User-visible outcome:** Students can submit a recording from the public page without logging in and only see a generic success message; only admins can view, play, download, export, or manage any submissions.

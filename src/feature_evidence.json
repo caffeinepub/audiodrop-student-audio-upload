@@ -2,11 +2,13 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-update-the-student-upload-form-so-that-students-can-submit-either-an-audio-file-or-a-video-file-at-least-one-must-be-provided-instead-of-requiring-an-audio-file-in-all-cases",
-      "featureTitle": "Update the Student Upload form so that students can submit either an audio file OR a video file (at least one must be provided), instead of requiring an audio file in all cases.",
+      "featureId": "feature-frontend-ensure-the-student-public-upload-flow-works-end-to-end-without-requiring-any-login-authentication-and-continue-to-show-only-generic-post-submission-success-ux-no-playback-no-filename-no-download-link-no-submission-id-timestamps-and-no-way-to-re-access-the-submission",
+      "featureTitle": "Frontend: Ensure the student public upload flow works end-to-end without requiring any login/authentication, and continue to show only generic post-submission success UX (no playback, no filename, no download link, no submission ID/timestamps, and no way to re-access the submission).",
       "files": [
-        "frontend/src/components/AudioRecorder.tsx",
-        "frontend/src/pages/StudentUploadPage.tsx"
+        "frontend/src/components/AppShell.tsx",
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/pages/StudentUploadPage.tsx",
+        "frontend/src/pages/SubmissionSuccessPage.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -18,13 +20,13 @@
         "github-export-icp-cli@1.0.0"
       ],
       "testIds": [
-        "REQ-28"
+        "REQ-77"
       ],
       "confidence": "high"
     },
     {
-      "featureId": "feature-add-client-side-validation-for-video-uploads-including-allowed-extensions-mime-types-and-a-maximum-file-size-consistent-with-the-existing-25mb-limit-and-wire-the-validation-into-the-student-upload-form",
-      "featureTitle": "Add client-side validation for video uploads, including allowed extensions/MIME types and a maximum file size consistent with the existing 25MB limit, and wire the validation into the Student Upload form.",
+      "featureId": "feature-media-policy-alignment-update-the-public-upload-ux-and-submission-payload-to-match-the-backend-s-intended-public-upload-media-policy-if-public-uploads-are-intended-to-be-audio-only-remove-disable-video-submission-in-the-student-upload-ui-and-ensure-the-backend-rejects-video-submissions-otherwise-ensure-backend-validation-covers-both-supported-media-types-without-allowing-executable-unknown-types",
+      "featureTitle": "Media policy alignment: Update the public upload UX and submission payload to match the backend’s intended public-upload media policy. If public uploads are intended to be audio-only, remove/disable video submission in the student upload UI and ensure the backend rejects `#video` submissions; otherwise, ensure backend validation covers both supported media types without allowing executable/unknown types.",
       "files": [
         "frontend/src/lib/videoValidation.ts",
         "frontend/src/pages/StudentUploadPage.tsx"
@@ -39,51 +41,7 @@
         "github-export-icp-cli@1.0.0"
       ],
       "testIds": [
-        "REQ-29"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-update-the-student-upload-submission-call-to-send-the-correct-media-payload-audio-or-video-to-the-backend-based-on-what-the-student-provided",
-      "featureTitle": "Update the Student Upload submission call to send the correct media payload (audio or video) to the backend, based on what the student provided.",
-      "files": [
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/pages/StudentUploadPage.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "blob-storage@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-31"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-update-the-admin-submission-details-view-so-it-can-handle-video-submissions-show-an-appropriate-playback-experience-for-video-submissions-or-a-clear-message-plus-download-action-while-preserving-current-audio-playback-for-audio-submissions",
-      "featureTitle": "Update the Admin submission details view so it can handle video submissions: show an appropriate playback experience for video submissions (or a clear message plus download action), while preserving current audio playback for audio submissions.",
-      "files": [
-        "frontend/src/components/admin/AdminMediaDownloadButton.tsx",
-        "frontend/src/components/admin/AdminVideoPlayer.tsx",
-        "frontend/src/pages/admin/AdminDashboardPage.tsx",
-        "frontend/src/pages/admin/SubmissionDetailsPage.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "blob-storage@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-32"
+        "REQ-78"
       ],
       "confidence": "high"
     }

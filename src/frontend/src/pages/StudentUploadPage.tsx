@@ -7,15 +7,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AudioRecorder from '../components/AudioRecorder';
 import LocalCaptchaChallenge from '../components/LocalCaptchaChallenge';
 import { useCreateSubmission, useGetAdminSettings } from '../hooks/useQueries';
 import { isValidAudioFile, ALLOWED_AUDIO_EXTENSIONS } from '../lib/audioValidation';
-import { isValidVideoFile, ALLOWED_VIDEO_EXTENSIONS, MAX_VIDEO_SIZE, formatFileSize } from '../lib/videoValidation';
-import { generateSubmissionId } from '../lib/submissionFormat';
 import { ExternalBlob, MediaType } from '../backend';
-import { Upload, FileAudio, FileVideo, Loader2, AlertCircle } from 'lucide-react';
+import { Upload, FileAudio, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function StudentUploadPage() {
@@ -31,11 +28,9 @@ export default function StudentUploadPage() {
     email: '',
   });
   const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [videoFile, setVideoFile] = useState<File | null>(null);
   const [consentConfirmed, setConsentConfirmed] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [audioValidationError, setAudioValidationError] = useState('');
-  const [videoValidationError, setVideoValidationError] = useState('');
   const [captchaPassed, setCaptchaPassed] = useState(false);
   const [showCaptcha, setShowCaptcha] = useState(false);
 
@@ -63,21 +58,6 @@ export default function StudentUploadPage() {
     setAudioFile(file);
   };
 
-  const handleVideoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const validation = isValidVideoFile(file);
-    if (!validation.valid) {
-      setVideoValidationError(validation.error || 'Invalid file');
-      setVideoFile(null);
-      return;
-    }
-
-    setVideoValidationError('');
-    setVideoFile(file);
-  };
-
   const handleRecordingComplete = (file: File) => {
     setAudioFile(file);
     setAudioValidationError('');
@@ -91,7 +71,7 @@ export default function StudentUploadPage() {
       formData.course.trim() !== '' &&
       formData.assessment.trim() !== '' &&
       formData.email.trim() !== '' &&
-      (audioFile !== null || videoFile !== null) && // At least one media file required
+      audioFile !== null &&
       consentConfirmed &&
       (!captchaRequired || captchaPassed)
     );
@@ -114,33 +94,24 @@ export default function StudentUploadPage() {
       if (captchaRequired && !captchaPassed) {
         setShowCaptcha(true);
         toast.error('Please complete the verification challenge');
-      } else if (!audioFile && !videoFile) {
-        toast.error('Please upload or record audio, or upload a video file');
+      } else if (!audioFile) {
+        toast.error('Please upload or record an audio file');
       } else {
         toast.error('Please fill in all required fields');
       }
       return;
     }
 
-    if (!audioFile && !videoFile) {
-      toast.error('Please upload or record audio, or upload a video file');
+    if (!audioFile) {
+      toast.error('Please upload or record an audio file');
       return;
     }
 
     try {
       setUploadProgress(0);
 
-      // Determine which media to submit (prefer video if both are present)
-      const mediaFile = videoFile || audioFile;
-      const mediaType: MediaType = videoFile ? MediaType.video : MediaType.audio;
-
-      if (!mediaFile) {
-        toast.error('No media file selected');
-        return;
-      }
-
       // Convert file to bytes
-      const arrayBuffer = await mediaFile.arrayBuffer();
+      const arrayBuffer = await audioFile.arrayBuffer();
       const bytes = new Uint8Array(arrayBuffer);
 
       // Create ExternalBlob with progress tracking
@@ -148,19 +119,13 @@ export default function StudentUploadPage() {
         setUploadProgress(percentage);
       });
 
-      // Generate submission ID
-      const submissionId = generateSubmissionId();
-
-      // Submit to backend
+      // Submit to backend (backend generates ID automatically)
       await createSubmission.mutateAsync({
-        id: submissionId,
-        fullName: formData.fullName,
         studentId: formData.studentId,
         course: formData.course,
         assessment: formData.assessment,
-        email: formData.email,
         media: externalBlob,
-        mediaType: mediaType,
+        mediaType: MediaType.audio,
       });
 
       // Navigate to success page without passing any identifiers
@@ -203,7 +168,7 @@ export default function StudentUploadPage() {
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold mb-2">Submit Your Recording</h1>
         <p className="text-muted-foreground">
-          Please fill in all required fields and upload your audio or video file. Maximum file size is 25MB.
+          Please fill in all required fields and upload your audio file. Maximum file size is 25MB.
         </p>
       </div>
 
@@ -284,100 +249,59 @@ export default function StudentUploadPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Media Upload *</CardTitle>
+            <CardTitle>Audio Submission</CardTitle>
             <CardDescription>
-              Submit either an audio recording or a video file (at least one is required)
+              You can upload an audio file or record audio directly in your browser.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="audio" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="audio">Audio</TabsTrigger>
-                <TabsTrigger value="video">Video</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="audio" className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="audioFile">Upload Audio File</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="audioFile"
-                      type="file"
-                      accept={ALLOWED_AUDIO_EXTENSIONS.map(ext => `.${ext}`).join(',')}
-                      onChange={handleAudioFileChange}
-                      disabled={isSubmitting}
-                      className="flex-1"
-                    />
-                    {audioFile && (
-                      <FileAudio className="h-5 w-5 text-green-600" />
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Accepted formats: {ALLOWED_AUDIO_EXTENSIONS.join(', ')} (max 25MB)
-                  </p>
-                  {audioValidationError && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>{audioValidationError}</AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">
-                      Or record audio
-                    </span>
-                  </div>
-                </div>
-
-                <AudioRecorder
-                  onRecordingComplete={handleRecordingComplete}
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="audioFile">Upload Audio File</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="audioFile"
+                  type="file"
+                  accept={ALLOWED_AUDIO_EXTENSIONS.map(ext => `.${ext}`).join(',')}
+                  onChange={handleAudioFileChange}
                   disabled={isSubmitting}
+                  className="flex-1"
                 />
-              </TabsContent>
-              
-              <TabsContent value="video" className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="videoFile">Upload Video File</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="videoFile"
-                      type="file"
-                      accept={ALLOWED_VIDEO_EXTENSIONS.map(ext => `.${ext}`).join(',')}
-                      onChange={handleVideoFileChange}
-                      disabled={isSubmitting}
-                      className="flex-1"
-                    />
-                    {videoFile && (
-                      <FileVideo className="h-5 w-5 text-green-600" />
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Accepted formats: {ALLOWED_VIDEO_EXTENSIONS.join(', ')} (max {formatFileSize(MAX_VIDEO_SIZE)})
-                  </p>
-                  {videoValidationError && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>{videoValidationError}</AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-              </TabsContent>
-            </Tabs>
+                {audioFile && (
+                  <FileAudio className="h-5 w-5 text-green-600" />
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Accepted formats: {ALLOWED_AUDIO_EXTENSIONS.join(', ')} (max 25MB)
+              </p>
+              {audioValidationError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{audioValidationError}</AlertDescription>
+                </Alert>
+              )}
+            </div>
 
-            {(audioFile || videoFile) && (
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or record audio
+                </span>
+              </div>
+            </div>
+
+            <AudioRecorder
+              onRecordingComplete={handleRecordingComplete}
+              disabled={isSubmitting}
+            />
+
+            {audioFile && (
               <Alert className="mt-4">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  {videoFile ? (
-                    <>Video file selected: <strong>{videoFile.name}</strong></>
-                  ) : (
-                    <>Audio file selected: <strong>{audioFile?.name}</strong></>
-                  )}
+                  Audio file selected: <strong>{audioFile.name}</strong>
                 </AlertDescription>
               </Alert>
             )}
@@ -422,7 +346,7 @@ export default function StudentUploadPage() {
                   <span className="text-muted-foreground">Uploading...</span>
                   <span className="font-medium">{uploadProgress}%</span>
                 </div>
-                <Progress value={uploadProgress} />
+                <Progress value={uploadProgress} className="h-2" />
               </div>
             )}
 

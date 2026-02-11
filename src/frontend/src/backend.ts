@@ -133,15 +133,19 @@ export interface backendInterface {
     _caffeineStorageUpdateGatewayPrincipals(): Promise<void>;
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
-    createSubmission(id: bigint, studentId: string, course: string, assessment: string, media: ExternalBlob, mediaType: MediaType): Promise<void>;
-    deleteSubmission(id: bigint): Promise<void>;
+    createSubmission(studentId: string, course: string, assessment: string, media: ExternalBlob, mediaType: MediaType): Promise<void>;
+    deleteSubmissionById(id: bigint): Promise<void>;
+    deleteSubmissionByStudentId(studentId: string, assessment: string): Promise<void>;
     getAllSubmissions(): Promise<Array<Submission>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
+    getServerTime(): Promise<Time | null>;
+    getStudentIdBySubmission(id: bigint): Promise<string>;
     getSubmission(id: bigint): Promise<Submission>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    userHasSubmission(studentId: string, assessment: string): Promise<boolean>;
 }
 import type { ExternalBlob as _ExternalBlob, MediaType as _MediaType, Submission as _Submission, Time as _Time, UserProfile as _UserProfile, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
@@ -258,31 +262,45 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async createSubmission(arg0: bigint, arg1: string, arg2: string, arg3: string, arg4: ExternalBlob, arg5: MediaType): Promise<void> {
+    async createSubmission(arg0: string, arg1: string, arg2: string, arg3: ExternalBlob, arg4: MediaType): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.createSubmission(arg0, arg1, arg2, arg3, await to_candid_ExternalBlob_n10(this._uploadFile, this._downloadFile, arg4), to_candid_MediaType_n11(this._uploadFile, this._downloadFile, arg5));
+                const result = await this.actor.createSubmission(arg0, arg1, arg2, await to_candid_ExternalBlob_n10(this._uploadFile, this._downloadFile, arg3), to_candid_MediaType_n11(this._uploadFile, this._downloadFile, arg4));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.createSubmission(arg0, arg1, arg2, arg3, await to_candid_ExternalBlob_n10(this._uploadFile, this._downloadFile, arg4), to_candid_MediaType_n11(this._uploadFile, this._downloadFile, arg5));
+            const result = await this.actor.createSubmission(arg0, arg1, arg2, await to_candid_ExternalBlob_n10(this._uploadFile, this._downloadFile, arg3), to_candid_MediaType_n11(this._uploadFile, this._downloadFile, arg4));
             return result;
         }
     }
-    async deleteSubmission(arg0: bigint): Promise<void> {
+    async deleteSubmissionById(arg0: bigint): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.deleteSubmission(arg0);
+                const result = await this.actor.deleteSubmissionById(arg0);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.deleteSubmission(arg0);
+            const result = await this.actor.deleteSubmissionById(arg0);
+            return result;
+        }
+    }
+    async deleteSubmissionByStudentId(arg0: string, arg1: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteSubmissionByStudentId(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteSubmissionByStudentId(arg0, arg1);
             return result;
         }
     }
@@ -326,6 +344,34 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.getCallerUserRole();
             return from_candid_UserRole_n24(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getServerTime(): Promise<Time | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getServerTime();
+                return from_candid_opt_n26(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getServerTime();
+            return from_candid_opt_n26(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getStudentIdBySubmission(arg0: bigint): Promise<string> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getStudentIdBySubmission(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getStudentIdBySubmission(arg0);
+            return result;
         }
     }
     async getSubmission(arg0: bigint): Promise<Submission> {
@@ -373,14 +419,28 @@ export class Backend implements backendInterface {
     async saveCallerUserProfile(arg0: UserProfile): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.saveCallerUserProfile(to_candid_UserProfile_n26(this._uploadFile, this._downloadFile, arg0));
+                const result = await this.actor.saveCallerUserProfile(to_candid_UserProfile_n27(this._uploadFile, this._downloadFile, arg0));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.saveCallerUserProfile(to_candid_UserProfile_n26(this._uploadFile, this._downloadFile, arg0));
+            const result = await this.actor.saveCallerUserProfile(to_candid_UserProfile_n27(this._uploadFile, this._downloadFile, arg0));
+            return result;
+        }
+    }
+    async userHasSubmission(arg0: string, arg1: string): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.userHasSubmission(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.userHasSubmission(arg0, arg1);
             return result;
         }
     }
@@ -410,6 +470,9 @@ function from_candid_opt_n20(_uploadFile: (file: ExternalBlob) => Promise<Uint8A
     return value.length === 0 ? null : from_candid_UserProfile_n21(_uploadFile, _downloadFile, value[0]);
 }
 function from_candid_opt_n23(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [string]): string | null {
+    return value.length === 0 ? null : value[0];
+}
+function from_candid_opt_n26(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_Time]): Time | null {
     return value.length === 0 ? null : value[0];
 }
 function from_candid_opt_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [boolean]): boolean | null {
@@ -497,8 +560,8 @@ async function to_candid_ExternalBlob_n10(_uploadFile: (file: ExternalBlob) => P
 function to_candid_MediaType_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: MediaType): _MediaType {
     return to_candid_variant_n12(_uploadFile, _downloadFile, value);
 }
-function to_candid_UserProfile_n26(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserProfile): _UserProfile {
-    return to_candid_record_n27(_uploadFile, _downloadFile, value);
+function to_candid_UserProfile_n27(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserProfile): _UserProfile {
+    return to_candid_record_n28(_uploadFile, _downloadFile, value);
 }
 function to_candid_UserRole_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): _UserRole {
     return to_candid_variant_n9(_uploadFile, _downloadFile, value);
@@ -509,7 +572,7 @@ function to_candid__CaffeineStorageRefillInformation_n2(_uploadFile: (file: Exte
 function to_candid_opt_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CaffeineStorageRefillInformation | null): [] | [__CaffeineStorageRefillInformation] {
     return value === null ? candid_none() : candid_some(to_candid__CaffeineStorageRefillInformation_n2(_uploadFile, _downloadFile, value));
 }
-function to_candid_record_n27(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function to_candid_record_n28(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     name: string;
     email?: string;
 }): {

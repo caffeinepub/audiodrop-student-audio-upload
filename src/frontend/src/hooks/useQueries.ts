@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from './useActor';
 import type { Submission, UserProfile, MediaType } from '../backend';
 import { ExternalBlob } from '../backend';
+import * as adminApi from '../lib/adminApi';
 
 // User Profile Queries
 export function useGetCallerUserProfile() {
@@ -72,19 +73,14 @@ export function useCreateSubmission() {
 
   return useMutation({
     mutationFn: async (params: {
-      id: bigint;
-      fullName: string;
       studentId: string;
       course: string;
       assessment: string;
-      email: string;
       media: ExternalBlob;
       mediaType: MediaType;
     }) => {
       if (!actor) throw new Error('Actor not available');
-      // Backend accepts media and mediaType
       return actor.createSubmission(
-        params.id,
         params.studentId,
         params.course,
         params.assessment,
@@ -105,7 +101,7 @@ export function useDeleteSubmission() {
   return useMutation({
     mutationFn: async (id: bigint) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.deleteSubmission(id);
+      return actor.deleteSubmissionById(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['submissions'] });
@@ -113,44 +109,97 @@ export function useDeleteSubmission() {
   });
 }
 
-// Admin Role Check
-export function useIsAdmin() {
-  const { actor, isFetching } = useActor();
+// Admin Session Management
+export function useAdminSession() {
+  const queryClient = useQueryClient();
 
-  return useQuery<boolean>({
-    queryKey: ['isAdmin'],
-    queryFn: async () => {
-      if (!actor) return false;
-      return actor.isCallerAdmin();
+  const sessionQuery = useQuery({
+    queryKey: ['adminSession'],
+    queryFn: () => adminApi.checkAdminSession(),
+    retry: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const loginMutation = useMutation({
+    mutationFn: (credentials: { username: string; password: string }) =>
+      adminApi.adminLogin(credentials),
+    onSuccess: () => {
+      queryClient.setQueryData(['adminSession'], true);
+      queryClient.invalidateQueries({ queryKey: ['submissions'] });
     },
-    enabled: !!actor && !isFetching,
+  });
+
+  const logoutMutation = useMutation({
+    mutationFn: () => adminApi.adminLogout(),
+    onSuccess: () => {
+      queryClient.setQueryData(['adminSession'], false);
+      queryClient.clear();
+    },
+  });
+
+  return {
+    data: sessionQuery.data,
+    isLoading: sessionQuery.isLoading,
+    login: loginMutation,
+    logout: logoutMutation,
+  };
+}
+
+// Admin Login Hook
+export function useAdminLogin() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (credentials: { username: string; password: string }) => {
+      return adminApi.adminLogin(credentials);
+    },
+    onSuccess: () => {
+      queryClient.setQueryData(['adminSession'], true);
+      queryClient.invalidateQueries({ queryKey: ['submissions'] });
+    },
   });
 }
 
-// Admin Settings (placeholder for backend implementation)
-export function useGetAdminSettings() {
-  const { actor, isFetching } = useActor();
+// Admin Check Hook
+export function useIsAdmin() {
+  return useQuery({
+    queryKey: ['adminSession'],
+    queryFn: () => adminApi.checkAdminSession(),
+    retry: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+}
 
-  return useQuery<{ captchaEnabled: boolean }>({
+// Admin Settings (placeholder)
+export function useGetAdminSettings() {
+  return useQuery({
     queryKey: ['adminSettings'],
     queryFn: async () => {
-      // Placeholder: Backend doesn't support settings yet
-      // Default to CAPTCHA disabled
-      return { captchaEnabled: false };
+      // Placeholder: return default settings
+      return {
+        captchaEnabled: false,
+        maxFileSize: 25 * 1024 * 1024,
+        rateLimit: 10,
+        maxAudioSizeMB: 25,
+        maxVideoSizeMB: 25,
+        maxSubmissionsPerHour: 10,
+      };
     },
-    enabled: !!actor && !isFetching,
   });
 }
 
 export function useUpdateAdminSettings() {
-  const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (settings: { captchaEnabled: boolean }) => {
-      if (!actor) throw new Error('Actor not available');
-      // Placeholder: Backend doesn't support settings yet
-      throw new Error('Settings update requires backend implementation');
+    mutationFn: async (settings: {
+      captchaEnabled: boolean;
+      maxAudioSizeMB: number;
+      maxVideoSizeMB: number;
+    }) => {
+      // Placeholder: simulate API call
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return settings;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminSettings'] });
@@ -158,43 +207,17 @@ export function useUpdateAdminSettings() {
   });
 }
 
-// Audit Log (placeholder for backend implementation)
-export function useGetAuditLog(filters?: { actionType?: string; startDate?: Date; endDate?: Date }) {
-  const { actor, isFetching } = useActor();
-
+// Audit Log (placeholder)
+export function useGetAuditLog(filters?: {
+  action?: string;
+  startDate?: Date;
+  endDate?: Date;
+}) {
   return useQuery({
     queryKey: ['auditLog', filters],
     queryFn: async () => {
-      if (!actor) return [];
-      // Placeholder: Backend doesn't support audit log yet
+      // Placeholder: return empty audit log
       return [];
-    },
-    enabled: !!actor && !isFetching,
-  });
-}
-
-// CSV Export (placeholder for backend implementation)
-export function useExportCSV() {
-  const { actor } = useActor();
-
-  return useMutation({
-    mutationFn: async (filters: { search?: string; startDate?: Date; endDate?: Date }) => {
-      if (!actor) throw new Error('Actor not available');
-      // Placeholder: Backend doesn't support CSV export yet
-      throw new Error('CSV export requires backend implementation');
-    },
-  });
-}
-
-// ZIP Export (placeholder for backend implementation)
-export function useExportZIP() {
-  const { actor } = useActor();
-
-  return useMutation({
-    mutationFn: async (filters: { search?: string; startDate?: Date; endDate?: Date }) => {
-      if (!actor) throw new Error('Actor not available');
-      // Placeholder: Backend doesn't support ZIP export yet
-      throw new Error('ZIP export requires backend implementation');
     },
   });
 }

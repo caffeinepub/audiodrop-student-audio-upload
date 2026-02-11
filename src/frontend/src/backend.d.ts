@@ -40,13 +40,17 @@ export enum UserRole {
 }
 export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
-    createSubmission(id: bigint, studentId: string, course: string, assessment: string, media: ExternalBlob, mediaType: MediaType): Promise<void>;
-    deleteSubmission(id: bigint): Promise<void>;
+    createSubmission(studentId: string, course: string, assessment: string, media: ExternalBlob, mediaType: MediaType): Promise<void>;
+    deleteSubmissionById(id: bigint): Promise<void>;
+    deleteSubmissionByStudentId(studentId: string, assessment: string): Promise<void>;
     getAllSubmissions(): Promise<Array<Submission>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
+    getServerTime(): Promise<Time | null>;
+    getStudentIdBySubmission(id: bigint): Promise<string>;
     getSubmission(id: bigint): Promise<Submission>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    userHasSubmission(studentId: string, assessment: string): Promise<boolean>;
 }

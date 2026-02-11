@@ -1,10 +1,9 @@
-import { ReactNode, useEffect } from 'react';
+import { ReactNode } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import { useIsAdmin } from '../hooks/useQueries';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { ShieldAlert } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ShieldAlert, Home, LogIn, Loader2 } from 'lucide-react';
 
 interface AdminRouteGuardProps {
   children: ReactNode;
@@ -12,51 +11,52 @@ interface AdminRouteGuardProps {
 
 export default function AdminRouteGuard({ children }: AdminRouteGuardProps) {
   const navigate = useNavigate();
-  const { identity, isInitializing } = useInternetIdentity();
-  const { data: isAdmin, isLoading: isCheckingAdmin } = useIsAdmin();
-
-  const isAuthenticated = !!identity;
-  const isLoading = isInitializing || isCheckingAdmin;
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      navigate({ to: '/admin/login' });
-    }
-  }, [isLoading, isAuthenticated, navigate]);
+  const { data: isAdmin, isLoading } = useIsAdmin();
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto" />
           <p className="text-muted-foreground">Verifying access...</p>
         </div>
       </div>
     );
   }
 
-  if (!isAuthenticated) {
-    return null;
-  }
-
   if (!isAdmin) {
     return (
-      <div className="max-w-2xl mx-auto mt-12">
-        <Alert variant="destructive">
-          <ShieldAlert className="h-5 w-5" />
-          <AlertTitle className="text-lg font-semibold">Access Denied</AlertTitle>
-          <AlertDescription className="mt-2">
-            You do not have permission to access this area. Admin privileges are required.
-          </AlertDescription>
-          <div className="mt-4">
+      <div className="max-w-md mx-auto mt-12">
+        <Card>
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <ShieldAlert className="h-16 w-16 text-destructive" />
+            </div>
+            <CardTitle className="text-2xl">Access Denied</CardTitle>
+            <CardDescription>
+              You do not have permission to access this page. Admin authentication is required.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
             <Button
-              variant="outline"
-              onClick={() => navigate({ to: '/' })}
+              onClick={() => navigate({ to: '/admin/login' })}
+              className="w-full"
+              size="lg"
             >
+              <LogIn className="h-5 w-5 mr-2" />
+              Go to Admin Login
+            </Button>
+            <Button
+              onClick={() => navigate({ to: '/' })}
+              variant="outline"
+              className="w-full"
+              size="lg"
+            >
+              <Home className="h-5 w-5 mr-2" />
               Return to Home
             </Button>
-          </div>
-        </Alert>
+          </CardContent>
+        </Card>
       </div>
     );
   }

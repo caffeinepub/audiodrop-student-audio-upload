@@ -58,17 +58,21 @@ export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'createSubmission' : ActorMethod<
-    [bigint, string, string, string, ExternalBlob, MediaType],
+    [string, string, string, ExternalBlob, MediaType],
     undefined
   >,
-  'deleteSubmission' : ActorMethod<[bigint], undefined>,
+  'deleteSubmissionById' : ActorMethod<[bigint], undefined>,
+  'deleteSubmissionByStudentId' : ActorMethod<[string, string], undefined>,
   'getAllSubmissions' : ActorMethod<[], Array<Submission>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
+  'getServerTime' : ActorMethod<[], [] | [Time]>,
+  'getStudentIdBySubmission' : ActorMethod<[bigint], string>,
   'getSubmission' : ActorMethod<[bigint], Submission>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
+  'userHasSubmission' : ActorMethod<[string, string], boolean>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

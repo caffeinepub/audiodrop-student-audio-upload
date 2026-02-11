@@ -70,6 +70,16 @@ const adminSettingsRoute = createRoute({
   ),
 });
 
+const adminAuditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/audit',
+  component: () => (
+    <AdminRouteGuard>
+      <AuditLogPage />
+    </AdminRouteGuard>
+  ),
+});
+
 const adminAuditLogRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/audit-log',
@@ -87,6 +97,7 @@ const routeTree = rootRoute.addChildren([
   adminDashboardRoute,
   adminSubmissionDetailsRoute,
   adminSettingsRoute,
+  adminAuditRoute,
   adminAuditLogRoute,
 ]);
 

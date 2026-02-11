@@ -1,107 +1,56 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Student Upload: allow audio or video submissions + admin video handling",
+  "title": "Public student submissions UX with strict post-submission privacy and audio-only alignment",
   "requirements": [
     {
-      "id": "REQ-28",
-      "summary": "Update Student Upload UI/validation to allow either audio or video (at least one), and update English text accordingly.",
+      "id": "REQ-77",
+      "summary": "Ensure the student public upload flow works without login and shows only a generic success UX with no submission re-access.",
       "acceptanceCriteria": [
-        "The form provides a clear choice between submitting Audio or Video (or two separate upload inputs with validation enforcing at least one).",
-        "The submit button is enabled only when required metadata fields are filled, consent is checked, CAPTCHA (if enabled) is passed, and at least one of {audioFile, videoFile} is present.",
-        "User-facing text is updated to reflect that audio is not mandatory if a video is uploaded (English only).",
-        "If a user selects an invalid file type for the chosen media, an accessible validation message is shown and submission is blocked."
+        "A student can submit from the public upload page successfully in a fresh session without performing any authentication steps.",
+        "After success, the UI shows only the exact message “Your recording has been submitted successfully.” and does not show playback controls, original filename, download link, submission ID, or timestamps.",
+        "The student UI does not provide any route/link/button to re-open or retrieve a previous submission’s media."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/pages/StudentUploadPage.tsx",
+          "path": "frontend/src/pages/SubmissionSuccessPage.tsx",
           "operation": "modify",
-          "description": "Add a clear media submission choice (audio vs video) and update form validation to require at least one of {audioFile, videoFile}. Update all user-facing copy to reflect audio is optional when a video is uploaded (English only), ensure validation errors are accessible, and ensure CAPTCHA/consent/required fields gating still applies. Use the blob-storage ExternalBlob to upload the chosen media bytes with progress (Verify the component's usage instructions before implementing)."
+          "description": "Reduce the success view to only the exact success message text “Your recording has been submitted successfully.” with no additional explanatory copy, actions, identifiers, timestamps, filenames, playback, or download UI."
         },
         {
-          "path": "frontend/src/components/AudioRecorder.tsx",
+          "path": "frontend/src/components/AppShell.tsx",
           "operation": "modify",
-          "description": "Adjust AudioRecorder presentation/labels so it remains compatible with an audio-or-video flow (e.g., clarify audio recording is only needed if submitting audio), without changing recording behavior."
-        }
-      ]
-    },
-    {
-      "id": "REQ-29",
-      "summary": "Add client-side video file validation (types + 25MB) and show accepted formats/max size near the video input.",
-      "acceptanceCriteria": [
-        "Video validation rejects files larger than 25MB with a clear error message.",
-        "Video validation rejects unsupported formats with a clear error message.",
-        "Audio validation continues to work unchanged for audio submissions.",
-        "The UI shows the accepted video formats and max size near the video file input."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/lib/videoValidation.ts",
-          "operation": "create",
-          "description": "Implement video validation helpers similar to existing audioValidation: allowed extensions/MIME types and a 25MB max size constant, returning clear error messages suitable for display in the Student Upload form."
+          "description": "Conditionally render a minimal shell on the /success route so the visible UI on success is only the required message (hide header navigation and footer on that route) and avoid introducing any controls that could imply submission re-access."
         },
         {
           "path": "frontend/src/pages/StudentUploadPage.tsx",
           "operation": "modify",
-          "description": "Wire the new video validation into the video file input, keep existing audio validation unchanged, and display accepted video formats and the 25MB limit near the video input."
-        }
-      ]
-    },
-    {
-      "id": "REQ-31",
-      "summary": "Update submission mutation and Student Upload submission call to send the correct media payload and mediaType (audio or video) while preserving upload progress UI.",
-      "acceptanceCriteria": [
-        "When a video file is uploaded, the frontend sends video bytes to the backend submission API and does not require an audio file.",
-        "When an audio file is uploaded/recorded, the frontend sends audio bytes to the backend submission API (current behavior preserved).",
-        "Upload progress UI continues to function for both audio and video uploads."
-      ],
-      "file_operations": [
+          "description": "Keep the student submission flow fully public (no login prompts/requirements) and ensure the post-submit navigation continues to go to /success without passing any submission identifiers; continue using blob upload via the blob-storage ExternalBlob class with progress tracking (Verify the component's usage instructions before implementing.)"
+        },
         {
           "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Update useCreateSubmission to accept a generic media ExternalBlob plus a MediaType value, and call the backend createSubmission with the correct arguments. Use the blob-storage ExternalBlob progress tracking consistently for both audio and video (Verify the component's usage instructions before implementing)."
-        },
-        {
-          "path": "frontend/src/pages/StudentUploadPage.tsx",
-          "operation": "modify",
-          "description": "Update submit handler to construct an ExternalBlob from the selected audio OR video file bytes (with upload progress), pass the correct mediaType, and ensure audio is not required when video is present. Use the blob-storage ExternalBlob to represent and upload the chosen media (Verify the component's usage instructions before implementing)."
+          "description": "Ensure the student create-submission mutation is compatible with a fresh/unauthenticated session (no UI-driven authentication prerequisite) and continues to avoid returning/handling any submission identifiers or media URLs in the public flow."
         }
       ]
     },
     {
-      "id": "REQ-32",
-      "summary": "Update Admin submission details view to support video submissions with appropriate playback or messaging + download, while preserving audio behavior and protected media access.",
+      "id": "REQ-78",
+      "summary": "Align the public upload UI to the intended media policy by making student uploads audio-only.",
       "acceptanceCriteria": [
-        "For audio submissions, the existing AdminAudioPlayer and audio download behavior continues to work.",
-        "For video submissions, the details page does not attempt to use the audio player; it provides a video playback UI or, at minimum, a clear message indicating it is a video submission plus a download button.",
-        "Download filename/extension is appropriate for the stored media type.",
-        "All admin media access remains protected via backend calls (no public bucket links)."
+        "If audio-only is selected as the intended policy: the student UI no longer allows video selection/upload, and the backend rejects any attempt to submit `mediaType=#video`.",
+        "If audio+video remains supported: the backend has explicit allowlists for each supported type and still blocks executable/unknown types; public submission does not accept arbitrary/unknown MIME types."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/admin/AdminVideoPlayer.tsx",
-          "operation": "create",
-          "description": "Create an admin video playback component that uses an ExternalBlob direct streaming URL for playback with loading/error states. Use blob-storage ExternalBlob.getDirectURL for streaming (Verify the component's usage instructions before implementing)."
-        },
-        {
-          "path": "frontend/src/components/admin/AdminMediaDownloadButton.tsx",
-          "operation": "create",
-          "description": "Create a media download button that fetches bytes from an ExternalBlob and downloads using a MIME type and filename appropriate to mediaType (audio vs video). Use blob-storage ExternalBlob.getBytes to retrieve data (Verify the component's usage instructions before implementing)."
-        },
-        {
-          "path": "frontend/src/pages/admin/SubmissionDetailsPage.tsx",
+          "path": "frontend/src/pages/StudentUploadPage.tsx",
           "operation": "modify",
-          "description": "Update details rendering to branch by submission.mediaType: keep using AdminAudioPlayer for audio, use AdminVideoPlayer (or a clear video message) for video, and use a media-type-aware download button. Ensure the page uses the submission ExternalBlob field from the backend interface and does not expose any public bucket links; media should be accessed via backend-provided ExternalBlob capabilities (Verify the blob-storage component's usage instructions before implementing)."
+          "description": "Update the public student upload UX to audio-only: remove/disable all video selection UI and state, remove video validation usage, adjust instructional copy to audio-only, and always submit with MediaType.audio; continue using blob-storage ExternalBlob for upload (Verify the component's usage instructions before implementing.)"
         },
         {
-          "path": "frontend/src/components/admin/AdminAudioDownloadButton.tsx",
+          "path": "frontend/src/lib/videoValidation.ts",
           "operation": "modify",
-          "description": "Preserve current audio download behavior by either delegating to the new AdminMediaDownloadButton for audio or keeping current logic while aligning naming/props expectations with the updated details page."
-        },
-        {
-          "path": "frontend/src/pages/admin/AdminDashboardPage.tsx",
-          "operation": "modify",
-          "description": "Update admin dashboard user-facing copy to reflect that submissions may be audio or video (English only), without changing admin route protection."
+          "description": "Deprecate or restrict video validation helpers so they are not used by the student public upload flow (keep file for admin-only needs if applicable), ensuring the student UI no longer offers or validates video uploads."
         }
       ]
     }

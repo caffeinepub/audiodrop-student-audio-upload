@@ -1,100 +1,87 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-11T02:26:31.839Z",
+  "generatedAt": "2026-02-11T05:21:37.669Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 5,
-    "implemented": 4,
+    "total": 6,
+    "implemented": 2,
     "items": [
       {
-        "id": "REQ-28",
-        "summary": "Update the Student Upload form so that students can submit either an audio file OR a video file (at least one must be provided), instead of requiring an audio file in all cases.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/pages/StudentUploadPage.tsx",
-          "frontend/src/components/AudioRecorder.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/pages/StudentUploadPage.tsx",
-          "frontend/src/components/AudioRecorder.tsx"
-        ]
-      },
-      {
-        "id": "REQ-29",
-        "summary": "Add client-side validation for video uploads, including allowed extensions/MIME types and a maximum file size consistent with the existing 25MB limit, and wire the validation into the Student Upload form.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/lib/videoValidation.ts",
-          "frontend/src/pages/StudentUploadPage.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/lib/videoValidation.ts",
-          "frontend/src/pages/StudentUploadPage.tsx"
-        ]
-      },
-      {
-        "id": "REQ-30",
-        "summary": "Extend the backend public submission API to accept either audio or video content, and persist which media type was submitted for each submission.",
+        "id": "REQ-73",
+        "summary": "Backend: Make submission creation fully public by removing the AccessControl permission requirement from `createSubmission()` (and any other submission-create entrypoints), so unauthenticated callers can submit successfully without trapping.",
         "status": "unknown",
         "plannedFiles": [],
         "matchedFiles": []
       },
       {
-        "id": "REQ-31",
-        "summary": "Update the Student Upload submission call to send the correct media payload (audio or video) to the backend, based on what the student provided.",
+        "id": "REQ-74",
+        "summary": "Backend: Preserve strict admin-only protection for all submission access and admin operations. Ensure all endpoints/methods that list/view/play/download/delete submissions, generate download links, bulk ZIP export, admin settings, and admin audit log enforce admin authorization and reject non-admin callers.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-75",
+        "summary": "Backend: Keep server-side validation and hardening on public submission creation. Validate required fields (`fullName`, `studentId`, `course`, `assessment`, `email`) and validate the uploaded media (type allowlist, block executable/unknown types, enforce max size 25MB, enforce duration limits if supported, and enforce rate limiting of 10 submissions/hour per IP or the closest available caller fingerprint on the platform).",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-76",
+        "summary": "Backend: Store uploaded media privately and do not expose any public URLs for student uploads. Ensure that any media retrieval mechanism requires admin authorization and does not provide publicly accessible links.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-77",
+        "summary": "Frontend: Ensure the student public upload flow works end-to-end without requiring any login/authentication, and continue to show only generic post-submission success UX (no playback, no filename, no download link, no submission ID/timestamps, and no way to re-access the submission).",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/StudentUploadPage.tsx"
+          "frontend/src/pages/SubmissionSuccessPage.tsx",
+          "frontend/src/components/AppShell.tsx",
+          "frontend/src/pages/StudentUploadPage.tsx",
+          "frontend/src/hooks/useQueries.ts"
         ],
         "matchedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/StudentUploadPage.tsx"
+          "frontend/src/pages/SubmissionSuccessPage.tsx",
+          "frontend/src/components/AppShell.tsx",
+          "frontend/src/pages/StudentUploadPage.tsx",
+          "frontend/src/hooks/useQueries.ts"
         ]
       },
       {
-        "id": "REQ-32",
-        "summary": "Update the Admin submission details view so it can handle video submissions: show an appropriate playback experience for video submissions (or a clear message plus download action), while preserving current audio playback for audio submissions.",
+        "id": "REQ-78",
+        "summary": "Media policy alignment: Update the public upload UX and submission payload to match the backend’s intended public-upload media policy. If public uploads are intended to be audio-only, remove/disable video submission in the student upload UI and ensure the backend rejects `#video` submissions; otherwise, ensure backend validation covers both supported media types without allowing executable/unknown types.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/admin/AdminVideoPlayer.tsx",
-          "frontend/src/components/admin/AdminMediaDownloadButton.tsx",
-          "frontend/src/pages/admin/SubmissionDetailsPage.tsx",
-          "frontend/src/components/admin/AdminAudioDownloadButton.tsx",
-          "frontend/src/pages/admin/AdminDashboardPage.tsx"
+          "frontend/src/pages/StudentUploadPage.tsx",
+          "frontend/src/lib/videoValidation.ts"
         ],
         "matchedFiles": [
-          "frontend/src/components/admin/AdminVideoPlayer.tsx",
-          "frontend/src/components/admin/AdminMediaDownloadButton.tsx",
-          "frontend/src/pages/admin/SubmissionDetailsPage.tsx",
-          "frontend/src/pages/admin/AdminDashboardPage.tsx"
+          "frontend/src/pages/StudentUploadPage.tsx",
+          "frontend/src/lib/videoValidation.ts"
         ]
       }
     ]
   },
   "changedFiles": [
-    "backend/main.mo",
-    "backend/migration.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/backend.d.ts",
-    "frontend/src/backend.ts",
-    "frontend/src/components/AudioRecorder.tsx",
-    "frontend/src/components/admin/AdminMediaDownloadButton.tsx",
-    "frontend/src/components/admin/AdminVideoPlayer.tsx",
-    "frontend/src/declarations/backend.did.d.ts",
-    "frontend/src/declarations/backend.did.js",
+    "frontend/src/components/AppShell.tsx",
     "frontend/src/hooks/useQueries.ts",
+    "frontend/src/lib/adminApi.ts",
     "frontend/src/lib/videoValidation.ts",
     "frontend/src/pages/StudentUploadPage.tsx",
-    "frontend/src/pages/admin/AdminDashboardPage.tsx",
-    "frontend/src/pages/admin/SubmissionDetailsPage.tsx",
+    "frontend/src/pages/SubmissionSuccessPage.tsx",
+    "frontend/src/pages/admin/AuditLogPage.tsx",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",
