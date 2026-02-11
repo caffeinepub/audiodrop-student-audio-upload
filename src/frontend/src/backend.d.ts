@@ -14,10 +14,31 @@ export class ExternalBlob {
     static fromBytes(blob: Uint8Array<ArrayBuffer>): ExternalBlob;
     withUploadProgress(onProgress: (percentage: number) => void): ExternalBlob;
 }
-export interface SubmissionIdInfo {
-    id: bigint;
-    studentId: string;
-    assessment: string;
+export type DownloadResponse = {
+    __kind__: "ok";
+    ok: {
+        originalFileName: string;
+        data: ExternalBlob;
+        fileName: string;
+        fileType: string;
+    };
+} | {
+    __kind__: "forbidden";
+    forbidden: string;
+} | {
+    __kind__: "notFound";
+    notFound: string;
+};
+export type AdminLoginResponse = {
+    __kind__: "ok";
+    ok: boolean;
+} | {
+    __kind__: "error";
+    error: string;
+};
+export interface AdminLoginRequest {
+    username: string;
+    password: string;
 }
 export type Time = bigint;
 export interface ExistingSubmission {
@@ -26,11 +47,6 @@ export interface ExistingSubmission {
     assessment: string;
     mediaType: MediaType;
     course: string;
-}
-export interface SubmissionIdAndMedia {
-    id: bigint;
-    media: ExternalBlob;
-    mediaType: MediaType;
 }
 export interface Submission {
     id: bigint;
@@ -41,12 +57,6 @@ export interface Submission {
     mediaType: MediaType;
     course: string;
     submittedAtUtc: Time;
-}
-export interface SubmissionInfo {
-    studentId: string;
-    assessment: string;
-    mediaType: MediaType;
-    course: string;
 }
 export interface UserProfile {
     name: string;
@@ -62,31 +72,22 @@ export enum UserRole {
     guest = "guest"
 }
 export interface backendInterface {
-    adminCheckAndGetSubmissionId(id: bigint): Promise<SubmissionIdAndMedia | null>;
     adminCreateSubmission(studentId: string, course: string, assessment: string, media: ExternalBlob, mediaType: MediaType): Promise<void>;
     adminDeleteSubmissionById(id: bigint): Promise<void>;
     adminDeleteSubmissionByStudentId(studentId: string, assessment: string): Promise<void>;
-    adminGetSubmission(id: bigint): Promise<Submission>;
+    adminDownloadSubmission(id: bigint): Promise<DownloadResponse>;
+    adminLogin(body: AdminLoginRequest): Promise<AdminLoginResponse>;
+    adminLogout(): Promise<void>;
     adminSubmissions(studentId: string): Promise<Array<ExistingSubmission>>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
-    checkAndGetSubmissionId(studentId: string, assessment: string): Promise<bigint>;
-    checkAndGetSubmissionIdAdmin(studentId: string, assessment: string): Promise<Submission | null>;
-    checkHasSubmissionId(studentId: string, assessment: string): Promise<boolean>;
     createSubmission(studentId: string, course: string, assessment: string, media: ExternalBlob, mediaType: MediaType): Promise<void>;
-    dataCheckAndGetSubmissionId(studentId: string, assessment: string): Promise<Submission | null>;
-    deleteSubmissionById(id: bigint): Promise<void>;
-    deleteSubmissionByStudentId(studentId: string, assessment: string): Promise<void>;
     getAllSubmissions(): Promise<Array<Submission>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
-    getMediaUrlOfSubmission(submissionId: bigint): Promise<ExternalBlob>;
     getServerTime(): Promise<Time | null>;
-    getStudentIdBySubmission(id: bigint): Promise<string>;
-    getSubmissionId(): Promise<Array<bigint>>;
-    getSubmissionIdFromStudentId(studentId: string, assessment: string): Promise<bigint>;
-    getSubmissionIdInfoByStudentId(studentId: string): Promise<Array<SubmissionIdInfo>>;
+    getSessionRole(): Promise<string | null>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
+    listSubmissions(): Promise<Array<Submission>>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
-    usersubmissionInfo(studentId: string): Promise<SubmissionInfo | null>;
 }

@@ -1,10 +1,12 @@
 # Specification
 
 ## Summary
-**Goal:** Allow students to create submissions from the public upload flow without authentication by removing the backend `#user` permission requirement, while keeping all admin/submission-access operations locked to admins.
+**Goal:** Convert in-browser recorder audio to MP3 (via FFmpeg.wasm) when the user attaches or submits a recording, without changing the uploaded-file flow.
 
 **Planned changes:**
-- Update `backend/main.mo` to remove the `AccessControl.hasPermission(..., #user)` authorization trap from `createSubmission()` (and any other submission-create entrypoints, if present) so anonymous callers can create submissions.
-- Ensure admin-only authorization remains enforced for all admin and submission-access operations (list/view submissions, media playback/download, delete, exports, settings, audit log), continuing to reject non-admin callers.
+- On “Use This Recording”, run FFmpeg.wasm to convert the recorder-produced Blob to an MP3 at 128kbps CBR, then replace the selected/attached file with the resulting MP3.
+- Ensure the attached MP3 is created with MIME type exactly `audio/mpeg` and a filename matching `recording-<timestamp>.mp3`.
+- Update the FFmpeg conversion helper to enforce 128kbps constant bitrate (CBR) MP3 output and return a non-empty `audio/mpeg` Blob.
+- On “Submit Recording”, submit the converted MP3 bytes for in-browser recordings, while leaving uploaded audio files unchanged (no conversion; preserve existing name/type behavior).
 
-**User-visible outcome:** From the public Student Upload page (without logging in), students can submit a valid recording/upload successfully and reach the success page, without hitting an “Unauthorized” backend trap.
+**User-visible outcome:** When recording in the browser and clicking “Use This Recording” (and then submitting), the app attaches/uploads an MP3 file (`audio/mpeg`, `recording-<timestamp>.mp3`). Uploaded audio files continue to upload as-is.

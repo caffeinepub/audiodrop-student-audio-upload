@@ -1,4 +1,66 @@
 {
   "kind": "feature_evidence_report",
-  "features": []
+  "features": [
+    {
+      "featureId": "feature-when-the-user-clicks-use-this-recording-in-the-in-browser-recorder-convert-the-recorded-blob-to-an-mp3-blob-using-ffmpeg-wasm-at-128kbps-cbr-then-attach-the-resulting-mp3-as-the-selected-upload-file",
+      "featureTitle": "When the user clicks \"Use This Recording\" in the in-browser recorder, convert the recorded Blob to an MP3 Blob using FFmpeg.wasm at 128kbps CBR, then attach the resulting MP3 as the selected upload file.",
+      "files": [
+        "frontend/src/components/AudioRecorder.tsx",
+        "frontend/src/pages/StudentUploadPage.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-update-the-ffmpeg-conversion-helper-so-the-produced-mp3-encoding-settings-are-128kbps-cbr-not-vbr-and-continue-returning-a-blob-with-mime-type-audio-mpeg",
+      "featureTitle": "Update the FFmpeg conversion helper so the produced MP3 encoding settings are 128kbps CBR (not VBR) and continue returning a Blob with MIME type \"audio/mpeg\".",
+      "files": [
+        "frontend/src/lib/ffmpeg/convertToMp3.ts"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-2"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-when-the-user-clicks-submit-recording-ensure-the-submission-uses-the-mp3-produced-from-in-browser-recordings-as-specified-while-leaving-the-uploaded-file-flow-unchanged-uploaded-files-are-submitted-as-is",
+      "featureTitle": "When the user clicks \"Submit Recording\", ensure the submission uses the MP3 produced from in-browser recordings (as specified), while leaving the uploaded-file flow unchanged (uploaded files are submitted as-is).",
+      "files": [
+        "frontend/src/pages/StudentUploadPage.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-3"
+      ],
+      "confidence": "high"
+    }
+  ]
 }

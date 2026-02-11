@@ -24,21 +24,23 @@ export const MediaType = IDL.Variant({
   'audio' : IDL.Null,
   'video' : IDL.Null,
 });
-export const SubmissionIdAndMedia = IDL.Record({
-  'id' : IDL.Nat,
-  'media' : ExternalBlob,
-  'mediaType' : MediaType,
+export const DownloadResponse = IDL.Variant({
+  'ok' : IDL.Record({
+    'originalFileName' : IDL.Text,
+    'data' : ExternalBlob,
+    'fileName' : IDL.Text,
+    'fileType' : IDL.Text,
+  }),
+  'forbidden' : IDL.Text,
+  'notFound' : IDL.Text,
 });
-export const Time = IDL.Int;
-export const Submission = IDL.Record({
-  'id' : IDL.Nat,
-  'media' : ExternalBlob,
-  'studentId' : IDL.Text,
-  'assessment' : IDL.Text,
-  'submittedBy' : IDL.Opt(IDL.Principal),
-  'mediaType' : MediaType,
-  'course' : IDL.Text,
-  'submittedAtUtc' : Time,
+export const AdminLoginRequest = IDL.Record({
+  'username' : IDL.Text,
+  'password' : IDL.Text,
+});
+export const AdminLoginResponse = IDL.Variant({
+  'ok' : IDL.Bool,
+  'error' : IDL.Text,
 });
 export const ExistingSubmission = IDL.Record({
   'id' : IDL.Nat,
@@ -52,20 +54,20 @@ export const UserRole = IDL.Variant({
   'user' : IDL.Null,
   'guest' : IDL.Null,
 });
+export const Time = IDL.Int;
+export const Submission = IDL.Record({
+  'id' : IDL.Nat,
+  'media' : ExternalBlob,
+  'studentId' : IDL.Text,
+  'assessment' : IDL.Text,
+  'submittedBy' : IDL.Opt(IDL.Principal),
+  'mediaType' : MediaType,
+  'course' : IDL.Text,
+  'submittedAtUtc' : Time,
+});
 export const UserProfile = IDL.Record({
   'name' : IDL.Text,
   'email' : IDL.Opt(IDL.Text),
-});
-export const SubmissionIdInfo = IDL.Record({
-  'id' : IDL.Nat,
-  'studentId' : IDL.Text,
-  'assessment' : IDL.Text,
-});
-export const SubmissionInfo = IDL.Record({
-  'studentId' : IDL.Text,
-  'assessment' : IDL.Text,
-  'mediaType' : MediaType,
-  'course' : IDL.Text,
 });
 
 export const idlService = IDL.Service({
@@ -96,11 +98,6 @@ export const idlService = IDL.Service({
     ),
   '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
-  'adminCheckAndGetSubmissionId' : IDL.Func(
-      [IDL.Nat],
-      [IDL.Opt(SubmissionIdAndMedia)],
-      ['query'],
-    ),
   'adminCreateSubmission' : IDL.Func(
       [IDL.Text, IDL.Text, IDL.Text, ExternalBlob, MediaType],
       [],
@@ -108,69 +105,37 @@ export const idlService = IDL.Service({
     ),
   'adminDeleteSubmissionById' : IDL.Func([IDL.Nat], [], []),
   'adminDeleteSubmissionByStudentId' : IDL.Func([IDL.Text, IDL.Text], [], []),
-  'adminGetSubmission' : IDL.Func([IDL.Nat], [Submission], ['query']),
+  'adminDownloadSubmission' : IDL.Func(
+      [IDL.Nat],
+      [DownloadResponse],
+      ['query'],
+    ),
+  'adminLogin' : IDL.Func([AdminLoginRequest], [AdminLoginResponse], []),
+  'adminLogout' : IDL.Func([], [], []),
   'adminSubmissions' : IDL.Func(
       [IDL.Text],
       [IDL.Vec(ExistingSubmission)],
       ['query'],
     ),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
-  'checkAndGetSubmissionId' : IDL.Func(
-      [IDL.Text, IDL.Text],
-      [IDL.Nat],
-      ['query'],
-    ),
-  'checkAndGetSubmissionIdAdmin' : IDL.Func(
-      [IDL.Text, IDL.Text],
-      [IDL.Opt(Submission)],
-      ['query'],
-    ),
-  'checkHasSubmissionId' : IDL.Func(
-      [IDL.Text, IDL.Text],
-      [IDL.Bool],
-      ['query'],
-    ),
   'createSubmission' : IDL.Func(
       [IDL.Text, IDL.Text, IDL.Text, ExternalBlob, MediaType],
       [],
       [],
     ),
-  'dataCheckAndGetSubmissionId' : IDL.Func(
-      [IDL.Text, IDL.Text],
-      [IDL.Opt(Submission)],
-      ['query'],
-    ),
-  'deleteSubmissionById' : IDL.Func([IDL.Nat], [], []),
-  'deleteSubmissionByStudentId' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'getAllSubmissions' : IDL.Func([], [IDL.Vec(Submission)], ['query']),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
-  'getMediaUrlOfSubmission' : IDL.Func([IDL.Nat], [ExternalBlob], ['query']),
   'getServerTime' : IDL.Func([], [IDL.Opt(Time)], []),
-  'getStudentIdBySubmission' : IDL.Func([IDL.Nat], [IDL.Text], ['query']),
-  'getSubmissionId' : IDL.Func([], [IDL.Vec(IDL.Nat)], ['query']),
-  'getSubmissionIdFromStudentId' : IDL.Func(
-      [IDL.Text, IDL.Text],
-      [IDL.Nat],
-      ['query'],
-    ),
-  'getSubmissionIdInfoByStudentId' : IDL.Func(
-      [IDL.Text],
-      [IDL.Vec(SubmissionIdInfo)],
-      ['query'],
-    ),
+  'getSessionRole' : IDL.Func([], [IDL.Opt(IDL.Text)], ['query']),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
       [IDL.Opt(UserProfile)],
       ['query'],
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'listSubmissions' : IDL.Func([], [IDL.Vec(Submission)], ['query']),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
-  'usersubmissionInfo' : IDL.Func(
-      [IDL.Text],
-      [IDL.Opt(SubmissionInfo)],
-      ['query'],
-    ),
 });
 
 export const idlInitArgs = [];
@@ -189,21 +154,23 @@ export const idlFactory = ({ IDL }) => {
   });
   const ExternalBlob = IDL.Vec(IDL.Nat8);
   const MediaType = IDL.Variant({ 'audio' : IDL.Null, 'video' : IDL.Null });
-  const SubmissionIdAndMedia = IDL.Record({
-    'id' : IDL.Nat,
-    'media' : ExternalBlob,
-    'mediaType' : MediaType,
+  const DownloadResponse = IDL.Variant({
+    'ok' : IDL.Record({
+      'originalFileName' : IDL.Text,
+      'data' : ExternalBlob,
+      'fileName' : IDL.Text,
+      'fileType' : IDL.Text,
+    }),
+    'forbidden' : IDL.Text,
+    'notFound' : IDL.Text,
   });
-  const Time = IDL.Int;
-  const Submission = IDL.Record({
-    'id' : IDL.Nat,
-    'media' : ExternalBlob,
-    'studentId' : IDL.Text,
-    'assessment' : IDL.Text,
-    'submittedBy' : IDL.Opt(IDL.Principal),
-    'mediaType' : MediaType,
-    'course' : IDL.Text,
-    'submittedAtUtc' : Time,
+  const AdminLoginRequest = IDL.Record({
+    'username' : IDL.Text,
+    'password' : IDL.Text,
+  });
+  const AdminLoginResponse = IDL.Variant({
+    'ok' : IDL.Bool,
+    'error' : IDL.Text,
   });
   const ExistingSubmission = IDL.Record({
     'id' : IDL.Nat,
@@ -217,20 +184,20 @@ export const idlFactory = ({ IDL }) => {
     'user' : IDL.Null,
     'guest' : IDL.Null,
   });
+  const Time = IDL.Int;
+  const Submission = IDL.Record({
+    'id' : IDL.Nat,
+    'media' : ExternalBlob,
+    'studentId' : IDL.Text,
+    'assessment' : IDL.Text,
+    'submittedBy' : IDL.Opt(IDL.Principal),
+    'mediaType' : MediaType,
+    'course' : IDL.Text,
+    'submittedAtUtc' : Time,
+  });
   const UserProfile = IDL.Record({
     'name' : IDL.Text,
     'email' : IDL.Opt(IDL.Text),
-  });
-  const SubmissionIdInfo = IDL.Record({
-    'id' : IDL.Nat,
-    'studentId' : IDL.Text,
-    'assessment' : IDL.Text,
-  });
-  const SubmissionInfo = IDL.Record({
-    'studentId' : IDL.Text,
-    'assessment' : IDL.Text,
-    'mediaType' : MediaType,
-    'course' : IDL.Text,
   });
   
   return IDL.Service({
@@ -261,11 +228,6 @@ export const idlFactory = ({ IDL }) => {
       ),
     '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
-    'adminCheckAndGetSubmissionId' : IDL.Func(
-        [IDL.Nat],
-        [IDL.Opt(SubmissionIdAndMedia)],
-        ['query'],
-      ),
     'adminCreateSubmission' : IDL.Func(
         [IDL.Text, IDL.Text, IDL.Text, ExternalBlob, MediaType],
         [],
@@ -273,69 +235,37 @@ export const idlFactory = ({ IDL }) => {
       ),
     'adminDeleteSubmissionById' : IDL.Func([IDL.Nat], [], []),
     'adminDeleteSubmissionByStudentId' : IDL.Func([IDL.Text, IDL.Text], [], []),
-    'adminGetSubmission' : IDL.Func([IDL.Nat], [Submission], ['query']),
+    'adminDownloadSubmission' : IDL.Func(
+        [IDL.Nat],
+        [DownloadResponse],
+        ['query'],
+      ),
+    'adminLogin' : IDL.Func([AdminLoginRequest], [AdminLoginResponse], []),
+    'adminLogout' : IDL.Func([], [], []),
     'adminSubmissions' : IDL.Func(
         [IDL.Text],
         [IDL.Vec(ExistingSubmission)],
         ['query'],
       ),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
-    'checkAndGetSubmissionId' : IDL.Func(
-        [IDL.Text, IDL.Text],
-        [IDL.Nat],
-        ['query'],
-      ),
-    'checkAndGetSubmissionIdAdmin' : IDL.Func(
-        [IDL.Text, IDL.Text],
-        [IDL.Opt(Submission)],
-        ['query'],
-      ),
-    'checkHasSubmissionId' : IDL.Func(
-        [IDL.Text, IDL.Text],
-        [IDL.Bool],
-        ['query'],
-      ),
     'createSubmission' : IDL.Func(
         [IDL.Text, IDL.Text, IDL.Text, ExternalBlob, MediaType],
         [],
         [],
       ),
-    'dataCheckAndGetSubmissionId' : IDL.Func(
-        [IDL.Text, IDL.Text],
-        [IDL.Opt(Submission)],
-        ['query'],
-      ),
-    'deleteSubmissionById' : IDL.Func([IDL.Nat], [], []),
-    'deleteSubmissionByStudentId' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'getAllSubmissions' : IDL.Func([], [IDL.Vec(Submission)], ['query']),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
-    'getMediaUrlOfSubmission' : IDL.Func([IDL.Nat], [ExternalBlob], ['query']),
     'getServerTime' : IDL.Func([], [IDL.Opt(Time)], []),
-    'getStudentIdBySubmission' : IDL.Func([IDL.Nat], [IDL.Text], ['query']),
-    'getSubmissionId' : IDL.Func([], [IDL.Vec(IDL.Nat)], ['query']),
-    'getSubmissionIdFromStudentId' : IDL.Func(
-        [IDL.Text, IDL.Text],
-        [IDL.Nat],
-        ['query'],
-      ),
-    'getSubmissionIdInfoByStudentId' : IDL.Func(
-        [IDL.Text],
-        [IDL.Vec(SubmissionIdInfo)],
-        ['query'],
-      ),
+    'getSessionRole' : IDL.Func([], [IDL.Opt(IDL.Text)], ['query']),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
         [IDL.Opt(UserProfile)],
         ['query'],
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'listSubmissions' : IDL.Func([], [IDL.Vec(Submission)], ['query']),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
-    'usersubmissionInfo' : IDL.Func(
-        [IDL.Text],
-        [IDL.Opt(SubmissionInfo)],
-        ['query'],
-      ),
   });
 };
 

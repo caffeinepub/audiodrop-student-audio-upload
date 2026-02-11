@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AudioRecorder from '../components/AudioRecorder';
 import LocalCaptchaChallenge from '../components/LocalCaptchaChallenge';
 import { useCreateSubmission, useGetAdminSettings } from '../hooks/useQueries';
@@ -28,6 +29,7 @@ export default function StudentUploadPage() {
     email: '',
   });
   const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [isFromRecording, setIsFromRecording] = useState(false);
   const [consentConfirmed, setConsentConfirmed] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [audioValidationError, setAudioValidationError] = useState('');
@@ -51,15 +53,18 @@ export default function StudentUploadPage() {
     if (!validation.valid) {
       setAudioValidationError(validation.error || 'Invalid file');
       setAudioFile(null);
+      setIsFromRecording(false);
       return;
     }
 
     setAudioValidationError('');
     setAudioFile(file);
+    setIsFromRecording(false); // Uploaded file, not from recording
   };
 
   const handleRecordingComplete = (file: File) => {
     setAudioFile(file);
+    setIsFromRecording(true); // Mark as from recording
     setAudioValidationError('');
     toast.success('Recording attached successfully');
   };
@@ -107,6 +112,20 @@ export default function StudentUploadPage() {
       return;
     }
 
+    // Validate file size before upload
+    if (audioFile.size === 0) {
+      toast.error('The audio file is empty. Please record or select a valid audio file.');
+      return;
+    }
+
+    // For recordings, ensure it's an MP3 file
+    if (isFromRecording) {
+      if (audioFile.type !== 'audio/mpeg' || !audioFile.name.endsWith('.mp3')) {
+        toast.error('Recording conversion failed. Please try recording again.');
+        return;
+      }
+    }
+
     try {
       setUploadProgress(0);
 
@@ -114,18 +133,32 @@ export default function StudentUploadPage() {
       const arrayBuffer = await audioFile.arrayBuffer();
       const bytes = new Uint8Array(arrayBuffer);
 
+      // Validate bytes are not empty
+      if (bytes.length === 0) {
+        toast.error('The audio file contains no data. Please try recording or uploading again.');
+        return;
+      }
+
+      // Extract file metadata - use actual file type
+      const originalFileName = audioFile.name;
+      const mimeType = audioFile.type || 'application/octet-stream';
+      const sizeBytes = audioFile.size;
+
       // Create ExternalBlob with progress tracking
       const externalBlob = ExternalBlob.fromBytes(bytes).withUploadProgress((percentage) => {
         setUploadProgress(percentage);
       });
 
-      // Submit to backend (backend generates ID automatically)
+      // Submit to backend with file metadata for durable storage
       await createSubmission.mutateAsync({
         studentId: formData.studentId,
         course: formData.course,
         assessment: formData.assessment,
         media: externalBlob,
         mediaType: MediaType.audio,
+        originalFileName,
+        mimeType,
+        sizeBytes,
       });
 
       // Navigate to success page without passing any identifiers
@@ -133,9 +166,13 @@ export default function StudentUploadPage() {
     } catch (error: any) {
       console.error('Submission failed:', error);
       
-      // Handle rate limit errors
-      if (error?.message?.includes('rate limit') || error?.message?.includes('too many')) {
+      // Handle specific error types with clean, user-friendly messages
+      if (error?.message?.includes('Upload failed')) {
+        toast.error('Upload failed. Please try again.');
+      } else if (error?.message?.includes('rate limit') || error?.message?.includes('too many')) {
         toast.error('You have exceeded the submission limit. Please try again later (10 submissions per hour maximum).');
+      } else if (error?.message?.includes('storage') || error?.message?.includes('file')) {
+        toast.error('Upload failed. Please try again.');
       } else {
         toast.error('Failed to submit. Please try again.');
       }
@@ -251,119 +288,119 @@ export default function StudentUploadPage() {
           <CardHeader>
             <CardTitle>Audio Submission</CardTitle>
             <CardDescription>
-              You can upload an audio file or record audio directly in your browser.
+              Upload an audio file or record directly in your browser
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="audioFile">Upload Audio File</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="audioFile"
-                  type="file"
-                  accept={ALLOWED_AUDIO_EXTENSIONS.map(ext => `.${ext}`).join(',')}
-                  onChange={handleAudioFileChange}
-                  disabled={isSubmitting}
-                  className="flex-1"
-                />
-                {audioFile && (
-                  <FileAudio className="h-5 w-5 text-green-600" />
+          <CardContent>
+            <Tabs defaultValue="upload" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="upload">Upload File</TabsTrigger>
+                <TabsTrigger value="record">Record Audio</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="upload" className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="audioFile">Audio File *</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="audioFile"
+                      type="file"
+                      accept={ALLOWED_AUDIO_EXTENSIONS.join(',')}
+                      onChange={handleAudioFileChange}
+                      disabled={isSubmitting}
+                      className="cursor-pointer"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Supported formats: MP3, WAV, M4A, OGG, WEBM (max 25MB)
+                  </p>
+                </div>
+
+                {audioValidationError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{audioValidationError}</AlertDescription>
+                  </Alert>
                 )}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Accepted formats: {ALLOWED_AUDIO_EXTENSIONS.join(', ')} (max 25MB)
-              </p>
-              {audioValidationError && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{audioValidationError}</AlertDescription>
-                </Alert>
-              )}
-            </div>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Or record audio
-                </span>
-              </div>
-            </div>
+                {audioFile && !audioValidationError && !isFromRecording && (
+                  <Alert>
+                    <FileAudio className="h-4 w-4" />
+                    <AlertDescription>
+                      File selected: {audioFile.name} ({(audioFile.size / 1024 / 1024).toFixed(2)} MB)
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </TabsContent>
 
-            <AudioRecorder
-              onRecordingComplete={handleRecordingComplete}
-              disabled={isSubmitting}
-            />
+              <TabsContent value="record" className="space-y-4">
+                <AudioRecorder
+                  onRecordingComplete={handleRecordingComplete}
+                  disabled={isSubmitting}
+                />
 
-            {audioFile && (
-              <Alert className="mt-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Audio file selected: <strong>{audioFile.name}</strong>
-                </AlertDescription>
-              </Alert>
-            )}
+                {audioFile && !audioValidationError && isFromRecording && (
+                  <Alert>
+                    <FileAudio className="h-4 w-4" />
+                    <AlertDescription>
+                      Recording attached: {audioFile.name} ({(audioFile.size / 1024 / 1024).toFixed(2)} MB)
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6 space-y-4">
-            <div className="flex items-start gap-3">
+          <CardHeader>
+            <CardTitle>Consent & Submission</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-start space-x-2">
               <Checkbox
                 id="consent"
                 checked={consentConfirmed}
                 onCheckedChange={(checked) => setConsentConfirmed(checked === true)}
                 disabled={isSubmitting}
               />
-              <div className="space-y-1">
-                <Label
+              <div className="grid gap-1.5 leading-none">
+                <label
                   htmlFor="consent"
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                 >
-                  I confirm that this is my own work and I consent to its submission *
-                </Label>
+                  I confirm that this is my own work *
+                </label>
                 <p className="text-xs text-muted-foreground">
-                  By checking this box, you acknowledge that the recording is your original work
-                  and you have the right to submit it.
+                  By checking this box, you confirm that the submitted audio is your own original work.
                 </p>
               </div>
             </div>
 
-            {captchaRequired && !captchaPassed && (
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Verification is required before submission. Click Submit to complete the verification challenge.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {isSubmitting && uploadProgress > 0 && (
+            {isSubmitting && (
               <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Uploading...</span>
-                  <span className="font-medium">{uploadProgress}%</span>
+                <div className="flex items-center justify-between text-sm">
+                  <span>Uploading...</span>
+                  <span>{uploadProgress}%</span>
                 </div>
-                <Progress value={uploadProgress} className="h-2" />
+                <Progress value={uploadProgress} className="w-full" />
               </div>
             )}
 
             <Button
               type="submit"
-              disabled={!isFormValid() || isSubmitting}
               className="w-full"
+              disabled={!isFormValid() || isSubmitting}
               size="lg"
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Submitting...
                 </>
               ) : (
                 <>
-                  <Upload className="h-5 w-5 mr-2" />
+                  <Upload className="mr-2 h-4 w-4" />
                   Submit Recording
                 </>
               )}

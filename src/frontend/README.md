@@ -1,43 +1,74 @@
 # AudioDrop Frontend
 
-A modern web application for students to submit audio and video recordings, with a comprehensive admin dashboard for managing submissions.
+A modern web application for managing student audio and video submissions with a secure admin dashboard.
 
 ## Features
 
 ### Student Features
-- **Audio & Video Upload**: Students can upload pre-recorded audio or video files
-- **In-Browser Recording**: Optional in-browser audio recording with pause/resume functionality
-- **Required Metadata**: Student ID, course, and assessment information
-- **Privacy-First**: No submission tracking or identifiers exposed to students
-- **CAPTCHA Protection**: Optional math-based CAPTCHA to prevent spam
+- **Audio-only submission** (video support removed from public upload)
+- In-browser audio recording with pause/resume
+- File upload with drag-and-drop support
+- Real-time upload progress tracking
+- Privacy-first: No submission identifiers shown to students
+- Simple success confirmation after submission
 
 ### Admin Features
-- **Dashboard**: View and manage all submissions with search and filtering
-- **Media Playback**: Stream audio and video directly in the browser
-- **Download**: Download individual media files
-- **Export Tools**: Export submission metadata as CSV
-- **Settings**: Configure CAPTCHA, rate limits, and upload limits
-- **Audit Log**: Track admin actions and system events
-- **Secure Authentication**: Hardcoded admin credentials for secure access
+- **Session-based authentication** with hardcoded credentials
+  - Username: `OP Admin`
+  - Password: `admin123`
+- Submissions dashboard with search and filtering
+- Detailed submission view with media playback
+- Audio and video playback with streaming support
+- Media download functionality
+- CSV metadata export
+- Delete submissions with confirmation
+- Settings page (placeholder for future features)
+- Audit log (placeholder for future features)
 
-## Admin Authentication
+### Security Features
+- Session-based admin authentication (backend + client-side)
+- Constant-time password comparison
+- Session expiration (24 hours)
+- CSRF protection helpers (for future use)
+- XSS prevention with text sanitization
+- Secure media streaming via ExternalBlob
 
-Admin authentication uses hardcoded credentials:
+## Architecture
 
-- **Username**: OP Admin
-- **Password**: Hellyea11
+### Tech Stack
+- **React 19** with TypeScript
+- **TanStack Router** for routing
+- **TanStack Query** for server state management
+- **Tailwind CSS** with OKLCH color system
+- **shadcn/ui** components
+- **Internet Computer** backend (Motoko)
 
-Access the admin panel at `/admin/login` and use these credentials to log in.
+### Key Components
+- `StudentUploadPage`: Public audio submission form
+- `AdminDashboardPage`: Admin submissions management
+- `AdminLoginPage`: Admin authentication
+- `SubmissionDetailsPage`: Detailed submission view
+- `AdminRouteGuard`: Route protection for admin pages
 
-## Tech Stack
+### State Management
+- React Query for server state and caching
+- Session storage for admin session tracking
+- Backend session management via `adminLogin`/`adminLogout`
 
-- **Frontend Framework**: React 19 with TypeScript
-- **Routing**: TanStack Router
-- **State Management**: React Query (TanStack Query)
-- **UI Components**: Shadcn/ui (Radix UI primitives)
-- **Styling**: Tailwind CSS with OKLCH color system
-- **Backend**: Motoko canister on Internet Computer
-- **Authentication**: Internet Identity (for students) + hardcoded admin credentials
+### Admin Authentication Flow
+1. User enters credentials on `/admin/login`
+2. Frontend validates credentials client-side
+3. Frontend calls `actor.adminLogin(password)` to establish backend session
+4. Backend sets `session.role = "admin"` for the caller's Principal
+5. Client stores session info in `sessionStorage`
+6. All admin endpoints check `session.role === "admin"` on backend
+7. Logout calls `actor.adminLogout()` to clear backend session
 
-## Project Structure
+## Development
 
+### Prerequisites
+- Node.js 18+
+- pnpm
+- dfx (Internet Computer SDK)
+
+### Setup

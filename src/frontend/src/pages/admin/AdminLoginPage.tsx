@@ -26,15 +26,11 @@ export default function AdminLoginPage() {
     }
 
     try {
-      const result = await adminLogin.mutateAsync({ username, password });
-      
-      if (result.ok) {
-        navigate({ to: '/admin/dashboard' });
-      } else {
-        setAuthError('Invalid admin credentials');
-      }
-    } catch (error) {
-      setAuthError('Invalid admin credentials');
+      await adminLogin.mutateAsync({ username, password });
+      navigate({ to: '/admin/dashboard' });
+    } catch (error: any) {
+      // Display exact backend error message
+      setAuthError(error?.message || 'Invalid admin credentials');
     }
   };
 

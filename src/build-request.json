@@ -1,57 +1,84 @@
 {
   "kind": "build_request",
-  "title": "Make student submission creation fully public by removing #user permission check",
-  "priority": "high",
+  "title": "Convert in-browser recordings to MP3 (FFmpeg.wasm) on attach/submit",
+  "priority": "normal",
   "requirements": [
     {
-      "id": "REQ-79",
-      "text": "Update the Motoko backend so that the public student upload flow can create submissions without any authentication by removing the `AccessControl.hasPermission(..., #user)` requirement from `createSubmission()` (and any other submission-create entrypoints, if present), so unauthenticated callers do not hit an \"Unauthorized\" trap.",
-      "target": "backend",
+      "id": "REQ-1",
+      "text": "When the user clicks \"Use This Recording\" in the in-browser recorder, convert the recorded Blob to an MP3 Blob using FFmpeg.wasm at 128kbps CBR, then attach the resulting MP3 as the selected upload file.",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-recent-apply-fix"
+          "msg-4"
         ],
         "quotes": [
-          "yes apply fix",
-          "Your backend still contains this line inside `createSubmission()`: `if (not (AccessControl.hasPermission(accessControlState, caller, #user))) { Runtime.trap(\"Unauthorized: Only authenticated users can create submissions\"); };`"
+          "Wire MP3 conversion ONLY for in-browser recordings.\n\n- When user clicks \"Use This Recording\" or \"Submit Recording\":\n   convert the recorded Blob to MP3 using FFmpeg.wasm at 128kbps CBR.\n- Replace the upload file with the MP3 Blob.\n- Set filename to something like: recording-<timestamp>.mp3\n- Set mimeType to audio/mpeg.\nDo not modify file-upload path yet (uploaded files can remain unchanged for now)."
         ]
       },
       "acceptanceCriteria": [
-        "From the public Student Upload page (without logging in), a valid submission succeeds and the frontend can navigate to the success page (i.e., no backend trap with \"Unauthorized: Only authenticated users can create submissions\").",
-        "`backend/main.mo` no longer traps on `createSubmission()` due to missing `#user` permission.",
-        "The caller principal can remain stored as `submittedBy = ?caller` (including anonymous principal) without causing failures."
+        "Clicking \"Use This Recording\" runs FFmpeg.wasm conversion on the recorder-produced Blob (not on uploaded files).",
+        "After clicking \"Use This Recording\", the form's selected file is an MP3 File/Blob with MIME type exactly \"audio/mpeg\".",
+        "After clicking \"Use This Recording\", the attached filename matches the pattern \"recording-<timestamp>.mp3\"."
       ]
     },
     {
-      "id": "REQ-80",
-      "text": "Preserve strict admin-only authorization checks for all admin and submission-access operations (list submissions, view submission details, media playback/download, delete submission, exports, settings, audit log). Non-admin callers must continue to be rejected for these operations.",
-      "target": "backend",
+      "id": "REQ-2",
+      "text": "Update the FFmpeg conversion helper so the produced MP3 encoding settings are 128kbps CBR (not VBR) and continue returning a Blob with MIME type \"audio/mpeg\".",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-recent-apply-fix"
+          "msg-4"
         ],
         "quotes": [
-          "public uploads will always fail because students are not authenticated."
+          "convert the recorded Blob to MP3 using FFmpeg.wasm at 128kbps CBR.",
+          "Set mimeType to audio/mpeg."
         ]
       },
       "acceptanceCriteria": [
-        "Non-admin callers cannot call `getAllSubmissions()`, `getSubmission()`, `deleteSubmissionById()`, or `deleteSubmissionByStudentId()` successfully; these methods continue to reject non-admin callers.",
-        "The change to make submission creation public does not make any admin-only data or media retrieval accessible to public callers."
+        "The FFmpeg invocation used by the app enforces 128kbps constant bitrate output for MP3 conversion.",
+        "The conversion helper returns a non-empty Blob whose type is \"audio/mpeg\"."
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "text": "When the user clicks \"Submit Recording\", ensure the submission uses the MP3 produced from in-browser recordings (as specified), while leaving the uploaded-file flow unchanged (uploaded files are submitted as-is).",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "Do not modify file-upload path yet (uploaded files can remain unchanged for now)."
+        ]
+      },
+      "acceptanceCriteria": [
+        "Submitting after attaching an in-browser recording uploads the MP3 bytes (not the original recorded container).",
+        "Submitting an uploaded audio file does not trigger MP3 conversion and preserves the original file name/type behavior."
       ]
     }
   ],
   "constraints": [
-    "Backend must remain a single Motoko actor with logic in `backend/main.mo`.",
-    "Do not edit files under `frontend/immutablePaths`.",
-    "Use English for any user-facing text."
+    "Do not change the uploaded-file path/flow at this time; only in-browser recordings are converted to MP3.",
+    "Do not add backend changes for this request (no Motoko API/schema changes).",
+    "Do not edit frontend files in immutablePaths (e.g., frontend/src/hooks/useActor.ts, frontend/src/hooks/useInternetIdentity.ts(x), frontend/src/main.tsx, or frontend/src/components/ui/*)."
   ],
   "nonGoals": [
-    "Implementing or changing admin authentication, sessions, or credentials as part of this fix.",
-    "Adding new media types, changing upload validation, or changing submission data model fields unrelated to removing the public submission authorization trap.",
-    "UI redesign work beyond what is required to verify the submission now succeeds."
+    "Server-side audio conversion.",
+    "Converting user-uploaded files to MP3.",
+    "Changing validation rules, size limits, or submission metadata beyond filename/mimeType for converted in-browser recordings."
   ],
   "imageRequirements": {
     "required": [],
     "edits": []
+  },
+  "userProfileUpdate": {
+    "goalsToAdd": [],
+    "goalsToRemove": [],
+    "preferencesToAdd": [],
+    "preferencesToRemove": [],
+    "miscToAdd": [],
+    "miscToRemove": [],
+    "fieldsToSet": {},
+    "fieldsToDelete": []
   }
 }

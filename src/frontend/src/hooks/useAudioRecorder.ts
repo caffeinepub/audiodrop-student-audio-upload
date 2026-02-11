@@ -5,6 +5,7 @@ interface UseAudioRecorderReturn {
   isPaused: boolean;
   recordingTime: number;
   recordedBlob: Blob | null;
+  recordedMimeType: string | null;
   isSupported: boolean;
   startRecording: () => Promise<void>;
   stopRecording: () => void;
@@ -19,6 +20,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   const [isPaused, setIsPaused] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
+  const [recordedMimeType, setRecordedMimeType] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -59,6 +61,10 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
+      // Store the actual MIME type from MediaRecorder
+      const actualMimeType = mediaRecorder.mimeType;
+      setRecordedMimeType(actualMimeType);
+
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           chunksRef.current.push(event.data);
@@ -66,7 +72,9 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        // Preserve the exact Blob type from MediaRecorder chunks
+        // Do NOT override with a hard-coded type
+        const blob = new Blob(chunksRef.current, { type: actualMimeType });
         setRecordedBlob(blob);
         stopTimer();
         
@@ -114,6 +122,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
 
   const clearRecording = useCallback(() => {
     setRecordedBlob(null);
+    setRecordedMimeType(null);
     setRecordingTime(0);
     chunksRef.current = [];
   }, []);
@@ -132,6 +141,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     isPaused,
     recordingTime,
     recordedBlob,
+    recordedMimeType,
     isSupported,
     startRecording,
     stopRecording,

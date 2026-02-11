@@ -1,6 +1,58 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Frontend no-op: public submission creation is backend-only",
-  "requirements": []
+  "title": "Convert in-browser recorder output to 128kbps CBR MP3 before attach/submit",
+  "requirements": [
+    {
+      "id": "REQ-1",
+      "summary": "Convert the in-browser recorder Blob to a 128kbps CBR MP3 via FFmpeg.wasm when the user clicks “Use This Recording”, then attach the MP3 as the selected upload file with the correct filename and MIME type.",
+      "acceptanceCriteria": [
+        "Clicking \"Use This Recording\" runs FFmpeg.wasm conversion on the recorder-produced Blob (not on uploaded files).",
+        "After clicking \"Use This Recording\", the form's selected file is an MP3 File/Blob with MIME type exactly \"audio/mpeg\".",
+        "After clicking \"Use This Recording\", the attached filename matches the pattern \"recording-<timestamp>.mp3\"."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/AudioRecorder.tsx",
+          "operation": "modify",
+          "description": "Update the “Use This Recording” action to asynchronously convert the internal recordedBlob to MP3 using the existing FFmpeg.wasm helper (convertToMp3), then create and pass a File named \"recording-<timestamp>.mp3\" with type exactly \"audio/mpeg\" to onRecordingComplete. Add local conversion loading/error handling so the user can’t attach the pre-conversion blob."
+        },
+        {
+          "path": "frontend/src/pages/StudentUploadPage.tsx",
+          "operation": "modify",
+          "description": "Ensure the recorder callback path accepts and stores the MP3 File produced by AudioRecorder as the selected audioFile, and maintains existing validation/toast behavior. Do not apply conversion logic to uploaded files."
+        }
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "summary": "Adjust the FFmpeg.wasm conversion helper to enforce 128kbps constant bitrate (CBR) MP3 output and return a non-empty Blob typed as audio/mpeg.",
+      "acceptanceCriteria": [
+        "The FFmpeg invocation used by the app enforces 128kbps constant bitrate output for MP3 conversion.",
+        "The conversion helper returns a non-empty Blob whose type is \"audio/mpeg\"."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/lib/ffmpeg/convertToMp3.ts",
+          "operation": "modify",
+          "description": "Modify the FFmpeg args to explicitly enforce 128kbps CBR (e.g., set bitrate and min/max rate consistently and disable VBR/Xing header as appropriate) while continuing to return a non-empty Blob with type exactly \"audio/mpeg\"."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "On “Submit Recording”, submit the MP3 bytes for in-browser recordings while leaving the uploaded-file submission flow unchanged (uploaded files submitted as-is, no FFmpeg conversion).",
+      "acceptanceCriteria": [
+        "Submitting after attaching an in-browser recording uploads the MP3 bytes (not the original recorded container).",
+        "Submitting an uploaded audio file does not trigger MP3 conversion and preserves the original file name/type behavior."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/pages/StudentUploadPage.tsx",
+          "operation": "modify",
+          "description": "Track whether the selected audioFile came from in-browser recording vs file upload (e.g., a small piece of local state set in handleRecordingComplete vs handleAudioFileChange). In handleSubmit, ensure the recording-origin file being submitted is the MP3 (type \"audio/mpeg\" and .mp3 name) produced on attach; if not, block submission with a user-facing error. Keep the uploaded-file path unchanged (no conversion; preserve current originalFileName/mimeType behavior)."
+        }
+      ]
+    }
+  ]
 }

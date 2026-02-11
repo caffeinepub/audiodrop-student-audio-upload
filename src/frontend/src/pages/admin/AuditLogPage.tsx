@@ -13,13 +13,15 @@ export default function AuditLogPage() {
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
 
-  const filters = {
-    action: actionFilter !== 'all' ? actionFilter : undefined,
-    startDate: startDate ? new Date(startDate) : undefined,
-    endDate: endDate ? new Date(endDate) : undefined,
-  };
+  const { data: auditLog, isLoading } = useGetAuditLog();
 
-  const { data: auditLog, isLoading } = useGetAuditLog(filters);
+  // Client-side filtering since backend doesn't support it yet
+  const filteredLog = auditLog?.filter((entry: any) => {
+    if (actionFilter !== 'all' && entry.action !== actionFilter) return false;
+    if (startDate && new Date(entry.timestamp) < new Date(startDate)) return false;
+    if (endDate && new Date(entry.timestamp) > new Date(endDate)) return false;
+    return true;
+  }) ?? [];
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -88,8 +90,8 @@ export default function AuditLogPage() {
         <CardHeader>
           <CardTitle>Activity Log</CardTitle>
           <CardDescription>
-            {auditLog && auditLog.length > 0
-              ? `Showing ${auditLog.length} entries`
+            {filteredLog && filteredLog.length > 0
+              ? `Showing ${filteredLog.length} entries`
               : 'No audit entries found'}
           </CardDescription>
         </CardHeader>
@@ -101,7 +103,7 @@ export default function AuditLogPage() {
                 <p className="text-muted-foreground">Loading audit log...</p>
               </div>
             </div>
-          ) : auditLog && auditLog.length > 0 ? (
+          ) : filteredLog && filteredLog.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -112,7 +114,7 @@ export default function AuditLogPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {auditLog.map((entry: any, index: number) => (
+                {filteredLog.map((entry: any, index: number) => (
                   <TableRow key={index}>
                     <TableCell>{new Date(entry.timestamp).toLocaleString()}</TableCell>
                     <TableCell>{entry.action}</TableCell>
