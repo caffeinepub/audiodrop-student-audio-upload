@@ -1,129 +1,54 @@
 {
   "kind": "build_request",
-  "title": "Make student submissions fully public while keeping all admin submission access protected",
+  "title": "Make student submission creation fully public by removing #user permission check",
   "priority": "high",
   "requirements": [
     {
-      "id": "REQ-73",
-      "text": "Backend: Make submission creation fully public by removing the AccessControl permission requirement from `createSubmission()` (and any other submission-create entrypoints), so unauthenticated callers can submit successfully without trapping.",
+      "id": "REQ-79",
+      "text": "Update the Motoko backend so that the public student upload flow can create submissions without any authentication by removing the `AccessControl.hasPermission(..., #user)` requirement from `createSubmission()` (and any other submission-create entrypoints, if present), so unauthenticated callers do not hit an \"Unauthorized\" trap.",
       "target": "backend",
       "source": {
         "messageIds": [
-          "msg-5"
+          "msg-recent-apply-fix"
         ],
         "quotes": [
-          "Remove AccessControl permission checks from createSubmission (and any related submission-create endpoints).\n- Anyone can create a submission without authentication."
+          "yes apply fix",
+          "Your backend still contains this line inside `createSubmission()`: `if (not (AccessControl.hasPermission(accessControlState, caller, #user))) { Runtime.trap(\"Unauthorized: Only authenticated users can create submissions\"); };`"
         ]
       },
       "acceptanceCriteria": [
-        "A caller with no AccessControl `#user` permission can successfully call `createSubmission()` and persist a new submission.",
-        "`createSubmission()` no longer traps with an Unauthorized error due to `AccessControl.hasPermission(..., #user)`.",
-        "The submission record does not require an authenticated principal; if caller identity is not required, `submittedBy` is stored as `null` (or equivalent) for public submissions."
+        "From the public Student Upload page (without logging in), a valid submission succeeds and the frontend can navigate to the success page (i.e., no backend trap with \"Unauthorized: Only authenticated users can create submissions\").",
+        "`backend/main.mo` no longer traps on `createSubmission()` due to missing `#user` permission.",
+        "The caller principal can remain stored as `submittedBy = ?caller` (including anonymous principal) without causing failures."
       ]
     },
     {
-      "id": "REQ-74",
-      "text": "Backend: Preserve strict admin-only protection for all submission access and admin operations. Ensure all endpoints/methods that list/view/play/download/delete submissions, generate download links, bulk ZIP export, admin settings, and admin audit log enforce admin authorization and reject non-admin callers.",
+      "id": "REQ-80",
+      "text": "Preserve strict admin-only authorization checks for all admin and submission-access operations (list submissions, view submission details, media playback/download, delete submission, exports, settings, audit log). Non-admin callers must continue to be rejected for these operations.",
       "target": "backend",
       "source": {
         "messageIds": [
-          "msg-5"
+          "msg-recent-apply-fix"
         ],
         "quotes": [
-          "Any endpoints that list/view/play/download/delete submissions MUST remain admin-only.\n- Admin-only middleware/guard must be enforced for:\n  - listSubmissions\n  - getSubmissionDetails\n  - getSubmissionAudio/download\n  - generate download links\n  - bulk zip export\n  - admin settings\n  - admin audit log"
+          "public uploads will always fail because students are not authenticated."
         ]
       },
       "acceptanceCriteria": [
-        "Non-admin callers cannot list submissions or fetch submission details (calls fail with an English unauthorized error).",
-        "Non-admin callers cannot play/stream/download any stored media and cannot obtain any downloadable link/URL for stored media.",
-        "Delete operations, bulk ZIP export, settings updates, and audit-log access are all rejected for non-admin callers.",
-        "Existing admin-only behavior for `getAllSubmissions`, `getSubmission`, and delete methods remains admin-gated after the public-upload change."
-      ]
-    },
-    {
-      "id": "REQ-75",
-      "text": "Backend: Keep server-side validation and hardening on public submission creation. Validate required fields (`fullName`, `studentId`, `course`, `assessment`, `email`) and validate the uploaded media (type allowlist, block executable/unknown types, enforce max size 25MB, enforce duration limits if supported, and enforce rate limiting of 10 submissions/hour per IP or the closest available caller fingerprint on the platform).",
-      "target": "backend",
-      "source": {
-        "messageIds": [
-          "msg-5"
-        ],
-        "quotes": [
-          "Keep server-side validation: required fields, file type, max size, duration, rate limit.\n\nValidate fields: fullName, studentId, course, assessment, email, audio\n- Block executable/unknown MIME types\n- File size limit: 25MB\n- Rate limiting: 10 submissions/hour/IP"
-        ]
-      },
-      "acceptanceCriteria": [
-        "If any required metadata field is missing/blank, `createSubmission()` fails with a clear English validation error (not a generic trap).",
-        "If media exceeds 25MB, the submission is rejected server-side.",
-        "If media MIME/type is not in the allowed allowlist (or is executable/unknown), the submission is rejected server-side.",
-        "Rate limiting is enforced server-side such that a single caller fingerprint cannot submit more than 10 submissions in a rolling hour window.",
-        "Validation and rate limiting are enforced even if the frontend is bypassed."
-      ]
-    },
-    {
-      "id": "REQ-76",
-      "text": "Backend: Store uploaded media privately and do not expose any public URLs for student uploads. Ensure that any media retrieval mechanism requires admin authorization and does not provide publicly accessible links.",
-      "target": "backend",
-      "source": {
-        "messageIds": [
-          "msg-5"
-        ],
-        "quotes": [
-          "Store uploads privately (no public URLs)"
-        ]
-      },
-      "acceptanceCriteria": [
-        "There is no API response from public submission creation that contains a publicly accessible media URL.",
-        "Any method that returns bytes/streams/links for media is admin-only and fails for unauthenticated/non-admin callers."
-      ]
-    },
-    {
-      "id": "REQ-77",
-      "text": "Frontend: Ensure the student public upload flow works end-to-end without requiring any login/authentication, and continue to show only generic post-submission success UX (no playback, no filename, no download link, no submission ID/timestamps, and no way to re-access the submission).",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-5"
-        ],
-        "quotes": [
-          "After change, a student can submit from the public page successfully without logging in, but cannot access any recordings after submission."
-        ]
-      },
-      "acceptanceCriteria": [
-        "A student can submit from the public upload page successfully in a fresh session without performing any authentication steps.",
-        "After success, the UI shows only the exact message “Your recording has been submitted successfully.” and does not show playback controls, original filename, download link, submission ID, or timestamps.",
-        "The student UI does not provide any route/link/button to re-open or retrieve a previous submission’s media."
-      ]
-    },
-    {
-      "id": "REQ-78",
-      "text": "Media policy alignment: Update the public upload UX and submission payload to match the backend’s intended public-upload media policy. If public uploads are intended to be audio-only, remove/disable video submission in the student upload UI and ensure the backend rejects `#video` submissions; otherwise, ensure backend validation covers both supported media types without allowing executable/unknown types.",
-      "target": "both",
-      "source": {
-        "messageIds": [
-          "msg-5"
-        ],
-        "quotes": [
-          "Restrict to audio-only (no video) if audio-only is intended"
-        ]
-      },
-      "acceptanceCriteria": [
-        "If audio-only is selected as the intended policy: the student UI no longer allows video selection/upload, and the backend rejects any attempt to submit `mediaType=#video`.",
-        "If audio+video remains supported: the backend has explicit allowlists for each supported type and still blocks executable/unknown types; public submission does not accept arbitrary/unknown MIME types."
+        "Non-admin callers cannot call `getAllSubmissions()`, `getSubmission()`, `deleteSubmissionById()`, or `deleteSubmissionByStudentId()` successfully; these methods continue to reject non-admin callers.",
+        "The change to make submission creation public does not make any admin-only data or media retrieval accessible to public callers."
       ]
     }
   ],
   "constraints": [
-    "Backend must remain a single Motoko actor with logic in `backend/main.mo`; create `backend/migration.mo` only if required by state upgrades under the conditional migration policy.",
-    "Do not edit files under `frontend/src/hooks/useInternetIdentity.ts`, `frontend/src/hooks/useInternetIdentity.tsx`, `frontend/src/hooks/useActor.ts`, `frontend/src/main.tsx`, or `frontend/src/components/ui` (compose instead).",
-    "All user-facing text must be in English.",
-    "Admin-only access must remain enforced for all submission viewing/downloading/exporting/settings/audit capabilities."
+    "Backend must remain a single Motoko actor with logic in `backend/main.mo`.",
+    "Do not edit files under `frontend/immutablePaths`.",
+    "Use English for any user-facing text."
   ],
   "nonGoals": [
-    "Implementing third-party authentication for students (student submissions must remain public).",
-    "Introducing public sharing links or any student-accessible media retrieval UI.",
-    "Adding external databases or non-supported backend technologies.",
-    "Changing the hardcoded admin credential approach unless required for enforcing admin-only protections."
+    "Implementing or changing admin authentication, sessions, or credentials as part of this fix.",
+    "Adding new media types, changing upload validation, or changing submission data model fields unrelated to removing the public submission authorization trap.",
+    "UI redesign work beyond what is required to verify the submission now succeeds."
   ],
   "imageRequirements": {
     "required": [],

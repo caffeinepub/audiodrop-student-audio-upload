@@ -61,7 +61,7 @@ export function useGetSubmission(id: bigint | null) {
     queryKey: ['submission', id?.toString()],
     queryFn: async () => {
       if (!actor || !id) return null;
-      return actor.getSubmission(id);
+      return actor.adminGetSubmission(id);
     },
     enabled: !!actor && !isFetching && id !== null,
   });
@@ -193,12 +193,15 @@ export function useUpdateAdminSettings() {
 
   return useMutation({
     mutationFn: async (settings: {
-      captchaEnabled: boolean;
-      maxAudioSizeMB: number;
-      maxVideoSizeMB: number;
+      captchaEnabled?: boolean;
+      maxFileSize?: number;
+      rateLimit?: number;
+      maxAudioSizeMB?: number;
+      maxVideoSizeMB?: number;
+      maxSubmissionsPerHour?: number;
     }) => {
       // Placeholder: simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
       return settings;
     },
     onSuccess: () => {
@@ -209,14 +212,14 @@ export function useUpdateAdminSettings() {
 
 // Audit Log (placeholder)
 export function useGetAuditLog(filters?: {
-  action?: string;
+  actionType?: string;
   startDate?: Date;
   endDate?: Date;
 }) {
   return useQuery({
     queryKey: ['auditLog', filters],
     queryFn: async () => {
-      // Placeholder: return empty audit log
+      // Placeholder: return empty array
       return [];
     },
   });

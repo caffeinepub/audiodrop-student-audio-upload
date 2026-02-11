@@ -1,6 +1,6 @@
 {
   "frontend/src/App.tsx": "Main application component with TanStack Router setup, defining all routes including both /admin/audit and /admin/audit-log paths (for backward compatibility) with appropriate guards and theme provider.",
-  "frontend/src/hooks/useQueries.ts": "React Query hooks for all backend operations including public submission creation, admin-only submission queries, user profiles, session-based admin authentication with useAdminLogin/useIsAdmin exports, and placeholder hooks for settings and audit log.",
+  "frontend/src/hooks/useQueries.ts": "React Query hooks for all backend operations including public submission creation, admin-only submission queries using adminGetSubmission, user profiles, session-based admin authentication with useAdminLogin/useIsAdmin exports, and placeholder hooks for settings and audit log.",
   "frontend/src/hooks/useAudioRecorder.ts": "Custom hook managing MediaRecorder lifecycle for in-browser audio recording with timer, pause/resume, and blob assembly.",
   "frontend/src/lib/audioValidation.ts": "Client-side audio file validation utilities including allowed formats, size limits, MIME type checking, and formatting helpers for file size and duration.",
   "frontend/src/lib/submissionFormat.ts": "Formatting utilities for timestamps (local/UTC), file sizes, durations, and submission ID generation/display.",

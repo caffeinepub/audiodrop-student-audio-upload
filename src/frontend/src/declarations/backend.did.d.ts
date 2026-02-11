@@ -10,6 +10,13 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export interface ExistingSubmission {
+  'id' : bigint,
+  'studentId' : string,
+  'assessment' : string,
+  'mediaType' : MediaType,
+  'course' : string,
+}
 export type ExternalBlob = Uint8Array;
 export type MediaType = { 'audio' : null } |
   { 'video' : null };
@@ -22,6 +29,22 @@ export interface Submission {
   'mediaType' : MediaType,
   'course' : string,
   'submittedAtUtc' : Time,
+}
+export interface SubmissionIdAndMedia {
+  'id' : bigint,
+  'media' : ExternalBlob,
+  'mediaType' : MediaType,
+}
+export interface SubmissionIdInfo {
+  'id' : bigint,
+  'studentId' : string,
+  'assessment' : string,
+}
+export interface SubmissionInfo {
+  'studentId' : string,
+  'assessment' : string,
+  'mediaType' : MediaType,
+  'course' : string,
 }
 export type Time = bigint;
 export interface UserProfile { 'name' : string, 'email' : [] | [string] }
@@ -56,23 +79,51 @@ export interface _SERVICE {
   >,
   '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
+  'adminCheckAndGetSubmissionId' : ActorMethod<
+    [bigint],
+    [] | [SubmissionIdAndMedia]
+  >,
+  'adminCreateSubmission' : ActorMethod<
+    [string, string, string, ExternalBlob, MediaType],
+    undefined
+  >,
+  'adminDeleteSubmissionById' : ActorMethod<[bigint], undefined>,
+  'adminDeleteSubmissionByStudentId' : ActorMethod<[string, string], undefined>,
+  'adminGetSubmission' : ActorMethod<[bigint], Submission>,
+  'adminSubmissions' : ActorMethod<[string], Array<ExistingSubmission>>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'checkAndGetSubmissionId' : ActorMethod<[string, string], bigint>,
+  'checkAndGetSubmissionIdAdmin' : ActorMethod<
+    [string, string],
+    [] | [Submission]
+  >,
+  'checkHasSubmissionId' : ActorMethod<[string, string], boolean>,
   'createSubmission' : ActorMethod<
     [string, string, string, ExternalBlob, MediaType],
     undefined
+  >,
+  'dataCheckAndGetSubmissionId' : ActorMethod<
+    [string, string],
+    [] | [Submission]
   >,
   'deleteSubmissionById' : ActorMethod<[bigint], undefined>,
   'deleteSubmissionByStudentId' : ActorMethod<[string, string], undefined>,
   'getAllSubmissions' : ActorMethod<[], Array<Submission>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
+  'getMediaUrlOfSubmission' : ActorMethod<[bigint], ExternalBlob>,
   'getServerTime' : ActorMethod<[], [] | [Time]>,
   'getStudentIdBySubmission' : ActorMethod<[bigint], string>,
-  'getSubmission' : ActorMethod<[bigint], Submission>,
+  'getSubmissionId' : ActorMethod<[], Array<bigint>>,
+  'getSubmissionIdFromStudentId' : ActorMethod<[string, string], bigint>,
+  'getSubmissionIdInfoByStudentId' : ActorMethod<
+    [string],
+    Array<SubmissionIdInfo>
+  >,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
-  'userHasSubmission' : ActorMethod<[string, string], boolean>,
+  'usersubmissionInfo' : ActorMethod<[string], [] | [SubmissionInfo]>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

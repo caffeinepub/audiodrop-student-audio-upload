@@ -1,58 +1,6 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Public student submissions UX with strict post-submission privacy and audio-only alignment",
-  "requirements": [
-    {
-      "id": "REQ-77",
-      "summary": "Ensure the student public upload flow works without login and shows only a generic success UX with no submission re-access.",
-      "acceptanceCriteria": [
-        "A student can submit from the public upload page successfully in a fresh session without performing any authentication steps.",
-        "After success, the UI shows only the exact message “Your recording has been submitted successfully.” and does not show playback controls, original filename, download link, submission ID, or timestamps.",
-        "The student UI does not provide any route/link/button to re-open or retrieve a previous submission’s media."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/pages/SubmissionSuccessPage.tsx",
-          "operation": "modify",
-          "description": "Reduce the success view to only the exact success message text “Your recording has been submitted successfully.” with no additional explanatory copy, actions, identifiers, timestamps, filenames, playback, or download UI."
-        },
-        {
-          "path": "frontend/src/components/AppShell.tsx",
-          "operation": "modify",
-          "description": "Conditionally render a minimal shell on the /success route so the visible UI on success is only the required message (hide header navigation and footer on that route) and avoid introducing any controls that could imply submission re-access."
-        },
-        {
-          "path": "frontend/src/pages/StudentUploadPage.tsx",
-          "operation": "modify",
-          "description": "Keep the student submission flow fully public (no login prompts/requirements) and ensure the post-submit navigation continues to go to /success without passing any submission identifiers; continue using blob upload via the blob-storage ExternalBlob class with progress tracking (Verify the component's usage instructions before implementing.)"
-        },
-        {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Ensure the student create-submission mutation is compatible with a fresh/unauthenticated session (no UI-driven authentication prerequisite) and continues to avoid returning/handling any submission identifiers or media URLs in the public flow."
-        }
-      ]
-    },
-    {
-      "id": "REQ-78",
-      "summary": "Align the public upload UI to the intended media policy by making student uploads audio-only.",
-      "acceptanceCriteria": [
-        "If audio-only is selected as the intended policy: the student UI no longer allows video selection/upload, and the backend rejects any attempt to submit `mediaType=#video`.",
-        "If audio+video remains supported: the backend has explicit allowlists for each supported type and still blocks executable/unknown types; public submission does not accept arbitrary/unknown MIME types."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/pages/StudentUploadPage.tsx",
-          "operation": "modify",
-          "description": "Update the public student upload UX to audio-only: remove/disable all video selection UI and state, remove video validation usage, adjust instructional copy to audio-only, and always submit with MediaType.audio; continue using blob-storage ExternalBlob for upload (Verify the component's usage instructions before implementing.)"
-        },
-        {
-          "path": "frontend/src/lib/videoValidation.ts",
-          "operation": "modify",
-          "description": "Deprecate or restrict video validation helpers so they are not used by the student public upload flow (keep file for admin-only needs if applicable), ensuring the student UI no longer offers or validates video uploads."
-        }
-      ]
-    }
-  ]
+  "title": "Frontend no-op: public submission creation is backend-only",
+  "requirements": []
 }

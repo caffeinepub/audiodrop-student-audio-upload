@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 27,
+  "projectStateVersion": 29,
   "summary": "AudioDrop – Student Audio Upload: a full-stack web app where students submit audio with required metadata via a fully public upload page (no student authentication required); students can never view/play/download or re-access submissions. A single authenticated admin can securely log in to review/search/filter submissions, play back and download audio (including bulk ZIP), export metadata CSV, and optionally delete with audit logging. Audio files are stored privately in object storage with signed/authenticated access; server-side validation, rate limiting, and optional email notifications are included. After upload, show only a generic success message (no playback, filename, download link, or re-access). Current direction for admin auth: a single hardcoded admin account (username \"OP Admin\", password \"Hellyea11\"), `POST /api/admin/login` accepts `{ username, password }`, creates a session with `role=\"admin\"` on match, and middleware guards all `/admin/*`, `/api/admin/*`, and any audio download endpoints by requiring `session.role === \"admin\"`; logout clears the session.",
   "architectural_notes": [
     "Audio files stored in secure/private object storage; avoid storing raw audio blobs in the database.",
@@ -659,6 +659,22 @@
       "summary": "Backend: Store uploaded media privately and do not expose any public URLs for student uploads. Ensure that any media retrieval mechanism requires admin authorization and does not provide publicly accessible links.",
       "reqIds": [
         "REQ-76"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-54",
+      "summary": "Update the Motoko backend so that the public student upload flow can create submissions without any authentication by removing the `AccessControl.hasPermission(..., #user)` requirement from `createSubmission()` (and any other submission-create entrypoints, if present), so unauthenticated callers do not hit an \"Unauthorized\" trap.",
+      "reqIds": [
+        "REQ-79"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-55",
+      "summary": "Preserve strict admin-only authorization checks for all admin and submission-access operations (list submissions, view submission details, media playback/download, delete submission, exports, settings, audit log). Non-admin callers must continue to be rejected for these operations.",
+      "reqIds": [
+        "REQ-80"
       ],
       "status": "pending"
     }
