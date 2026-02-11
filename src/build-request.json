@@ -1,0 +1,103 @@
+{
+  "kind": "build_request",
+  "title": "Make student upload accept video submissions (audio no longer mandatory when video is provided)",
+  "priority": "normal",
+  "requirements": [
+    {
+      "id": "REQ-28",
+      "text": "Update the Student Upload form so that students can submit either an audio file OR a video file (at least one must be provided), instead of requiring an audio file in all cases.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "why is Audio upload is mendotory id yuser have recorded the videos and submited"
+        ]
+      },
+      "acceptanceCriteria": [
+        "The form provides a clear choice between submitting Audio or Video (or two separate upload inputs with validation enforcing at least one).",
+        "The submit button is enabled only when required metadata fields are filled, consent is checked, CAPTCHA (if enabled) is passed, and at least one of {audioFile, videoFile} is present.",
+        "User-facing text is updated to reflect that audio is not mandatory if a video is uploaded (English only).",
+        "If a user selects an invalid file type for the chosen media, an accessible validation message is shown and submission is blocked."
+      ]
+    },
+    {
+      "id": "REQ-29",
+      "text": "Add client-side validation for video uploads, including allowed extensions/MIME types and a maximum file size consistent with the existing 25MB limit, and wire the validation into the Student Upload form.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Video validation rejects files larger than 25MB with a clear error message.",
+        "Video validation rejects unsupported formats with a clear error message.",
+        "Audio validation continues to work unchanged for audio submissions.",
+        "The UI shows the accepted video formats and max size near the video file input."
+      ]
+    },
+    {
+      "id": "REQ-30",
+      "text": "Extend the backend public submission API to accept either audio or video content, and persist which media type was submitted for each submission.",
+      "target": "backend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Backend create-submission method accepts submissions where exactly one of audio/video is provided (or accepts both but enforces at least one).",
+        "Backend rejects submissions with neither audio nor video and returns a meaningful error message.",
+        "Submission records store the submitted media type (audio vs video) and the associated ExternalBlob reference.",
+        "Existing admin-only endpoints (getSubmission, getAllSubmissions) return enough information for the admin UI to know whether the submission is audio or video."
+      ]
+    },
+    {
+      "id": "REQ-31",
+      "text": "Update the Student Upload submission call to send the correct media payload (audio or video) to the backend, based on what the student provided.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ]
+      },
+      "acceptanceCriteria": [
+        "When a video file is uploaded, the frontend sends video bytes to the backend submission API and does not require an audio file.",
+        "When an audio file is uploaded/recorded, the frontend sends audio bytes to the backend submission API (current behavior preserved).",
+        "Upload progress UI continues to function for both audio and video uploads."
+      ]
+    },
+    {
+      "id": "REQ-32",
+      "text": "Update the Admin submission details view so it can handle video submissions: show an appropriate playback experience for video submissions (or a clear message plus download action), while preserving current audio playback for audio submissions.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ]
+      },
+      "acceptanceCriteria": [
+        "For audio submissions, the existing AdminAudioPlayer and audio download behavior continues to work.",
+        "For video submissions, the details page does not attempt to use the audio player; it provides a video playback UI or, at minimum, a clear message indicating it is a video submission plus a download button.",
+        "Download filename/extension is appropriate for the stored media type.",
+        "All admin media access remains protected via backend calls (no public bucket links)."
+      ]
+    }
+  ],
+  "constraints": [
+    "Keep all Motoko logic in the single backend actor (backend/main.mo).",
+    "Do not edit files under frontend/src/components/ui or any paths listed as immutable in SYSTEM_CONTEXT.",
+    "All user-facing text must be in English."
+  ],
+  "nonGoals": [
+    "Implementing video recording in-browser (only video file upload is required).",
+    "Changing the post-submission student success behavior (it must remain the generic success message without IDs, playback, filename, timestamps, or re-access).",
+    "Adding new third-party video hosting or external storage providers."
+  ],
+  "imageRequirements": {
+    "required": [],
+    "edits": []
+  }
+}

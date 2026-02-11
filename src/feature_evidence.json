@@ -1,0 +1,91 @@
+{
+  "kind": "feature_evidence_report",
+  "features": [
+    {
+      "featureId": "feature-update-the-student-upload-form-so-that-students-can-submit-either-an-audio-file-or-a-video-file-at-least-one-must-be-provided-instead-of-requiring-an-audio-file-in-all-cases",
+      "featureTitle": "Update the Student Upload form so that students can submit either an audio file OR a video file (at least one must be provided), instead of requiring an audio file in all cases.",
+      "files": [
+        "frontend/src/components/AudioRecorder.tsx",
+        "frontend/src/pages/StudentUploadPage.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-28"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-add-client-side-validation-for-video-uploads-including-allowed-extensions-mime-types-and-a-maximum-file-size-consistent-with-the-existing-25mb-limit-and-wire-the-validation-into-the-student-upload-form",
+      "featureTitle": "Add client-side validation for video uploads, including allowed extensions/MIME types and a maximum file size consistent with the existing 25MB limit, and wire the validation into the Student Upload form.",
+      "files": [
+        "frontend/src/lib/videoValidation.ts",
+        "frontend/src/pages/StudentUploadPage.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-29"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-update-the-student-upload-submission-call-to-send-the-correct-media-payload-audio-or-video-to-the-backend-based-on-what-the-student-provided",
+      "featureTitle": "Update the Student Upload submission call to send the correct media payload (audio or video) to the backend, based on what the student provided.",
+      "files": [
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/pages/StudentUploadPage.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-31"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-update-the-admin-submission-details-view-so-it-can-handle-video-submissions-show-an-appropriate-playback-experience-for-video-submissions-or-a-clear-message-plus-download-action-while-preserving-current-audio-playback-for-audio-submissions",
+      "featureTitle": "Update the Admin submission details view so it can handle video submissions: show an appropriate playback experience for video submissions (or a clear message plus download action), while preserving current audio playback for audio submissions.",
+      "files": [
+        "frontend/src/components/admin/AdminMediaDownloadButton.tsx",
+        "frontend/src/components/admin/AdminVideoPlayer.tsx",
+        "frontend/src/pages/admin/AdminDashboardPage.tsx",
+        "frontend/src/pages/admin/SubmissionDetailsPage.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-32"
+      ],
+      "confidence": "high"
+    }
+  ]
+}

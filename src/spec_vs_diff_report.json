@@ -1,0 +1,51 @@
+{
+  "kind": "spec_vs_diff_report",
+  "version": "1.0",
+  "generatedAt": "2026-02-11T02:26:31.835Z",
+  "summary": "Diff adds support for a new mediaType (audio/video) on submissions, introduces video file validation utilities, updates admin views to handle video via a new player/download button, and updates the student upload page to track both audio and video files. Some acceptance-criteria details (notably correct filename/extension/MIME handling for varied video formats and confirmed frontend payload selection logic) are not fully evidenced in the truncated diff summary. The diff also introduces an unrequested Motoko migration module, which may violate the stated constraint about keeping Motoko logic in a single actor file.",
+  "missing_requirements": [
+    {
+      "id": "REQ-31",
+      "requirement": "Update the Student Upload submission call to send the correct media payload (audio or video) to the backend, based on what the student provided.",
+      "reason": "StudentUploadPage.tsx is truncated before the submit logic shows which of {audioFile, videoFile} is converted to an ExternalBlob and sent, so it’s not verifiable from the provided diff summary that video bytes are sent when video is uploaded (and that audio is not required in that path), nor that upload progress works for both.",
+      "evidence": [
+        "frontend/src/pages/StudentUploadPage.tsx (truncated)"
+      ]
+    },
+    {
+      "id": "REQ-32",
+      "requirement": "Download filename/extension is appropriate for the stored media type.",
+      "reason": "The admin download/filename logic appears hard-coded: SubmissionDetailsPage uses `.mp4` for any video submission, while AdminMediaDownloadButton hard-codes the MIME type to `video/webm` for video downloads. This does not reflect the accepted video formats (mp4/webm/mov/avi/mkv) and may produce mismatched extensions/MIME for non-webm video uploads.",
+      "evidence": [
+        "frontend/src/pages/admin/SubmissionDetailsPage.tsx",
+        "frontend/src/components/admin/AdminMediaDownloadButton.tsx",
+        "frontend/src/lib/videoValidation.ts"
+      ]
+    }
+  ],
+  "hallucinated_features": [
+    {
+      "description": "Added a Motoko migration module and wired it into the backend actor via `(with migration = Migration.run)`.",
+      "reason": "The BuildRequest did not request data migrations or a separate Motoko module; it also explicitly constrained Motoko logic to remain in a single backend actor file (backend/main.mo).",
+      "evidence": [
+        "backend/migration.mo",
+        "backend/main.mo"
+      ]
+    }
+  ],
+  "confidence": 0.62,
+  "changed_files": [
+    "backend/main.mo",
+    "backend/migration.mo",
+    "frontend-file-summaries.txt",
+    "frontend/src/components/AudioRecorder.tsx",
+    "frontend/src/components/admin/AdminMediaDownloadButton.tsx",
+    "frontend/src/components/admin/AdminVideoPlayer.tsx",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/lib/videoValidation.ts",
+    "frontend/src/pages/StudentUploadPage.tsx",
+    "frontend/src/pages/admin/AdminDashboardPage.tsx",
+    "frontend/src/pages/admin/SubmissionDetailsPage.tsx",
+    "project_state.json"
+  ]
+}

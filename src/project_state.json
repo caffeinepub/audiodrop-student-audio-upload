@@ -1,0 +1,349 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectStateVersion": 7,
+  "summary": "AudioDrop – Student Audio Upload: a full-stack web app where students submit audio with required metadata via a public upload page; students can never view/play/download or re-access submissions. A single authenticated admin account (“OP Admin”) can securely log in to review/search/filter submissions, play back and download audio (including bulk ZIP), export metadata CSV, and optionally delete with audit logging. Audio files are stored privately in object storage with signed/authenticated access; server-side validation, rate limiting, and optional email notifications are included. After upload, show only a generic success message (no playback, filename, download link, or re-access).",
+  "architectural_notes": [
+    "Audio files stored in secure/private object storage; avoid storing raw audio blobs in the database.",
+    "Downloads should require signed URLs or authenticated backend endpoints; files must not be publicly accessible.",
+    "Generate submission IDs as short codes (e.g., AD-8F3K2Q).",
+    "Use unique filenames: studentId_course_assessment_yyyymmdd_hhmmss_<random>.ext",
+    "Admin access is owner-only; create initial admin via environment variables or one-time setup screen protected by a setup key.",
+    "Use secure password hashing (bcrypt/argon2) for admin credentials.",
+    "Implement server-side validation for MIME/type and size; sanitize text inputs.",
+    "Maintain an audit log for admin actions (login, delete, ZIP download).",
+    "Student success state must display only a generic confirmation message; do not show playback, filename, download link, or allow re-access to the submission.",
+    "Admin access is a single account named “OP Admin”; password must not be hard-coded and must be set via first-time setup and/or environment variables, and stored with strong hashing (bcrypt/argon2)."
+  ],
+  "known_issues": [],
+  "isFixRequest": false,
+  "existing_features": [
+    {
+      "id": "feature-create-a-public-student-upload-flow-with-a-dedicated-page-that-includes-1-title-short-instructions-2-required-form-fields-full-name-student-id-course-assessment-task-email-3-required-audio-file-input-accepting-only-m4a-mp3-wav-webm-ogg-4-optional-in-browser-audio-recorder-when-supported-with-start-stop-timer-playback-re-record-then-attach-recording-as-a-file-5-required-checkbox-i-confirm-this-is-my-own-work-6-submit-button-disabled-until-all-required-fields-audio-are-present-7-upload-progress-ui-and-8-friendly-accessible-validation-error-messaging",
+      "title": "Create a public Student Upload flow with a dedicated page that includes: (1) title + short instructions, (2) required form fields (Full Name, Student ID, Course, Assessment/Task, Email), (3) required audio file input accepting only .m4a, .mp3, .wav, .webm, .ogg, (4) optional in-browser audio recorder (when supported) with start/stop, timer, playback, re-record, then attach recording as a file, (5) required checkbox “I confirm this is my own work”, (6) submit button disabled until all required fields + audio are present, (7) upload progress UI, and (8) friendly, accessible validation/error messaging.",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-a-submission-success-page-shown-after-a-successful-upload-that-displays-the-generated-submission-id-and-a-timestamp-both-local-time-and-utc",
+      "title": "Create a submission success page shown after a successful upload that displays the generated Submission ID and a timestamp (both local time and UTC).",
+      "reqIds": [
+        "REQ-4"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-admin-authentication-with-an-admin-login-page-email-password-and-protect-all-admin-routes-implement-initial-admin-bootstrap-either-via-environment-variables-or-a-one-time-setup-screen-protected-by-a-setup-key-passwords-must-be-stored-using-a-secure-password-hashing-approach-supported-by-the-platform",
+      "title": "Add Admin authentication with an Admin Login page (email + password) and protect all admin routes. Implement initial admin bootstrap either via environment variables or a one-time setup screen protected by a setup key. Passwords must be stored using a secure password hashing approach supported by the platform.",
+      "reqIds": [
+        "REQ-5"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-build-the-admin-dashboard-ui-private-that-lists-submissions-in-a-table-with-the-required-columns-submittedat-local-utc-full-name-student-id-course-assessment-email-audio-duration-file-type-file-size-and-supports-search-name-student-id-course-assessment-email-filters-course-assessment-date-range-and-sorting-by-submittedat-default-newest-first-provide-a-details-drawer-page-per-submission",
+      "title": "Build the Admin Dashboard UI (private) that lists submissions in a table with the required columns (SubmittedAt local+UTC, Full Name, Student ID, Course, Assessment, Email, Audio Duration, File Type, File Size) and supports: search (name, student id, course, assessment, email), filters (course, assessment, date range), and sorting by SubmittedAt (default newest first). Provide a details drawer/page per submission.",
+      "reqIds": [
+        "REQ-6"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-admin-audio-playback-and-single-file-download-from-the-admin-dashboard-details-view-using-protected-backend-access-no-public-bucket-links",
+      "title": "Add admin audio playback and single-file download from the Admin Dashboard details view, using protected backend access (no public bucket links).",
+      "reqIds": [
+        "REQ-8"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-admin-export-tools-1-export-metadata-as-csv-no-audio-for-the-current-filter-date-range-2-download-all-audio-for-a-selected-filter-date-range-as-a-zip-file-ensure-these-actions-are-admin-only-and-recorded-in-the-audit-log",
+      "title": "Implement admin export tools: (1) Export metadata as CSV (no audio) for the current filter/date range; (2) Download all audio for a selected filter/date range as a ZIP file. Ensure these actions are admin-only and recorded in the audit log.",
+      "reqIds": [
+        "REQ-9"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-optional-delete-submission-capability-in-the-admin-dashboard-with-a-confirmation-step-and-an-audit-log-entry-deletion-must-remove-or-render-inaccessible-both-the-submission-metadata-and-its-associated-audio-object",
+      "title": "Add optional “Delete submission” capability in the Admin Dashboard with a confirmation step and an audit log entry. Deletion must remove (or render inaccessible) both the submission metadata and its associated audio object.",
+      "reqIds": [
+        "REQ-10"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-anti-spam-controls-rate-limit-submissions-per-ip-default-10-submissions-hour-and-add-an-admin-configurable-toggle-to-require-a-captcha-challenge-on-the-public-upload-form-toggle-off-by-default",
+      "title": "Implement anti-spam controls: rate limit submissions per IP (default 10 submissions/hour) and add an admin-configurable toggle to require a CAPTCHA challenge on the public upload form (toggle off by default).",
+      "reqIds": [
+        "REQ-11"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-an-audit-log-system-for-admin-actions-at-minimum-admin-login-submission-delete-and-zip-download-provide-an-admin-view-to-browse-audit-log-entries-filterable-by-action-type-and-date-range",
+      "title": "Add an audit log system for admin actions at minimum: admin login, submission delete, and ZIP download. Provide an admin view to browse audit log entries (filterable by action type and date range).",
+      "reqIds": [
+        "REQ-12"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-security-hardening-appropriate-to-the-stack-protect-against-xss-via-output-encoding-and-input-sanitization-implement-csrf-protections-for-any-state-changing-admin-actions-ensure-all-admin-data-endpoints-require-auth-and-ensure-all-user-facing-text-is-in-english",
+      "title": "Implement security hardening appropriate to the stack: protect against XSS via output encoding and input sanitization; implement CSRF protections for any state-changing admin actions; ensure all admin data endpoints require auth; and ensure all user-facing text is in English.",
+      "reqIds": [
+        "REQ-13"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-optional-implement-email-notifications-after-submission-send-a-confirmation-email-to-the-student-with-submission-id-and-send-a-notification-email-to-the-admin-for-each-new-submission-provide-a-configuration-toggle-to-enable-disable-email-sending-and-document-required-configuration-values",
+      "title": "(Optional) Implement email notifications: after submission, send a confirmation email to the student with Submission ID; and send a notification email to the admin for each new submission. Provide a configuration toggle to enable/disable email sending and document required configuration values.",
+      "reqIds": [
+        "REQ-14"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-provide-basic-in-app-and-or-repository-documentation-describing-how-to-set-initialize-admin-credentials-env-vars-or-setup-key-what-storage-mechanism-is-used-for-audio-where-audio-objects-are-stored-referenced-and-operational-limits-max-size-rate-limits-recorder-duration",
+      "title": "Provide basic in-app and/or repository documentation describing: how to set/initialize admin credentials (env vars or setup key), what storage mechanism is used for audio, where audio objects are stored/referenced, and operational limits (max size, rate limits, recorder duration).",
+      "reqIds": [
+        "REQ-15"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-apply-a-coherent-clean-visual-theme-across-the-app-student-upload-admin-with-a-distinct-style-not-blue-purple-define-a-consistent-color-palette-typography-scale-spacing-and-component-styling-forms-tables-drawers-buttons-alerts-using-tailwind-shadcn-composition",
+      "title": "Apply a coherent, clean visual theme across the app (student upload + admin) with a distinct style (not blue/purple): define a consistent color palette, typography scale, spacing, and component styling (forms, tables, drawers, buttons, alerts) using Tailwind/Shadcn composition.",
+      "reqIds": [
+        "REQ-16"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-generated-static-brand-assets-and-wire-them-into-the-ui-include-an-app-logo-and-a-favicon-stored-under-frontend-public-assets-generated-and-referenced-by-the-ui-header-login-upload-pages-and-document-title-metadata",
+      "title": "Add generated static brand assets and wire them into the UI: include an app logo and a favicon stored under frontend/public/assets/generated and referenced by the UI (header/login/upload pages) and document title/metadata.",
+      "reqIds": [
+        "REQ-17"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-post-submission-student-experience-so-that-after-a-successful-upload-the-app-shows-only-the-exact-success-message-your-recording-has-been-submitted-successfully-and-never-displays-playback-controls-original-filename-a-download-link-a-submission-id-or-timestamps-students-must-not-be-able-to-re-access-a-submission-from-the-ui",
+      "title": "Update the post-submission student experience so that after a successful upload the app shows only the exact success message “Your recording has been submitted successfully.” and never displays playback controls, original filename, a download link, a Submission ID, or timestamps; students must not be able to re-access a submission from the UI.",
+      "reqIds": [
+        "REQ-18"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-modify-the-student-submission-call-so-it-sends-all-required-metadata-fields-fullname-studentid-course-assessment-task-email-to-the-backend-and-ensure-the-backend-persists-them-on-the-submission-record-per-the-provided-data-model",
+      "title": "Modify the student submission call so it sends all required metadata fields (fullName, studentId, course, assessment/task, email) to the backend and ensure the backend persists them on the Submission record per the provided data model.",
+      "reqIds": [
+        "REQ-19"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-replace-the-current-admin-authentication-flow-with-a-password-based-admin-login-that-supports-exactly-one-admin-account-named-op-admin-the-password-must-not-be-hard-coded-and-must-be-set-via-first-time-setup-and-or-an-environment-variable-stored-using-strong-password-hashing-bcrypt-or-argon2-and-all-admin-routes-and-admin-backend-methods-must-require-this-authentication",
+      "title": "Replace the current admin authentication flow with a password-based admin login that supports exactly one admin account named “OP Admin”; the password must not be hard-coded and must be set via first-time setup and/or an environment variable, stored using strong password hashing (bcrypt or argon2), and all admin routes and admin backend methods must require this authentication.",
+      "reqIds": [
+        "REQ-22"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-admin-bulk-audio-download-as-a-zip-file-for-a-selected-filter-date-range-performed-server-side-available-only-to-authenticated-admins-and-record-the-action-in-the-audit-log",
+      "title": "Implement admin bulk audio download as a ZIP file for a selected filter/date range, performed server-side, available only to authenticated admins, and record the action in the audit log.",
+      "reqIds": [
+        "REQ-23"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-admin-metadata-export-to-csv-comes-from-backend-filtered-results-not-only-in-memory-frontend-state-and-is-admin-only-include-the-required-columns-submission-id-submitted-time-fullname-studentid-course-assessment-email-file-type-file-size-duration",
+      "title": "Ensure admin metadata export to CSV comes from backend-filtered results (not only in-memory frontend state) and is admin-only; include the required columns (Submission ID, submitted time, fullName, studentId, course, assessment, email, file type, file size, duration).",
+      "reqIds": [
+        "REQ-24"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-audit-logging-for-admin-actions-at-minimum-admin-login-submission-delete-and-zip-download-provide-an-admin-audit-log-view-with-filtering-by-action-type-and-date-range",
+      "title": "Implement audit logging for admin actions at minimum: admin login, submission delete, and ZIP download; provide an admin audit log view with filtering by action type and date range.",
+      "reqIds": [
+        "REQ-25"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-anti-spam-rate-limiting-for-the-public-submission-endpoint-at-10-submissions-hour-per-ip-or-equivalent-caller-fingerprint-available-on-the-platform-and-support-an-admin-configurable-toggle-to-require-a-captcha-challenge-on-the-public-upload-form-toggle-off-by-default",
+      "title": "Implement anti-spam rate limiting for the public submission endpoint at 10 submissions/hour per IP (or equivalent caller fingerprint available on the platform), and support an admin-configurable toggle to require a CAPTCHA challenge on the public upload form (toggle off by default).",
+      "reqIds": [
+        "REQ-26"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-complete-csrf-protections-for-state-changing-admin-actions-delete-submission-zip-export-settings-updates-by-issuing-a-csrf-token-to-authenticated-admins-and-requiring-validating-it-on-relevant-backend-calls-ensure-all-user-facing-text-remains-in-english",
+      "title": "Complete CSRF protections for state-changing admin actions (delete submission, ZIP export, settings updates) by issuing a CSRF token to authenticated admins and requiring/validating it on relevant backend calls; ensure all user-facing text remains in English.",
+      "reqIds": [
+        "REQ-27"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-student-upload-form-so-that-students-can-submit-either-an-audio-file-or-a-video-file-at-least-one-must-be-provided-instead-of-requiring-an-audio-file-in-all-cases",
+      "title": "Update the Student Upload form so that students can submit either an audio file OR a video file (at least one must be provided), instead of requiring an audio file in all cases.",
+      "reqIds": [
+        "REQ-28"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-client-side-validation-for-video-uploads-including-allowed-extensions-mime-types-and-a-maximum-file-size-consistent-with-the-existing-25mb-limit-and-wire-the-validation-into-the-student-upload-form",
+      "title": "Add client-side validation for video uploads, including allowed extensions/MIME types and a maximum file size consistent with the existing 25MB limit, and wire the validation into the Student Upload form.",
+      "reqIds": [
+        "REQ-29"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-student-upload-submission-call-to-send-the-correct-media-payload-audio-or-video-to-the-backend-based-on-what-the-student-provided",
+      "title": "Update the Student Upload submission call to send the correct media payload (audio or video) to the backend, based on what the student provided.",
+      "reqIds": [
+        "REQ-31"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-admin-submission-details-view-so-it-can-handle-video-submissions-show-an-appropriate-playback-experience-for-video-submissions-or-a-clear-message-plus-download-action-while-preserving-current-audio-playback-for-audio-submissions",
+      "title": "Update the Admin submission details view so it can handle video submissions: show an appropriate playback experience for video submissions (or a clear message plus download action), while preserving current audio playback for audio submissions.",
+      "reqIds": [
+        "REQ-32"
+      ],
+      "version": 1
+    }
+  ],
+  "new_feature_requests": [
+    {
+      "id": "AR-2",
+      "summary": "Admin authentication: owner/admin-only login page with secure password hashing and initial admin setup via env vars or one-time setup key",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-3",
+      "summary": "Admin Dashboard: submissions table with search, filters, sorting, details view, and audio playback UI",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-4",
+      "summary": "Secure audio storage integration using private object storage (no raw blobs in DB), unique filename generation, and signed/authenticated downloads",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-5",
+      "summary": "Admin download/export tools: single download, bulk ZIP download for filter/date range, and metadata CSV export (no audio)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-6",
+      "summary": "Validation, limits, and anti-spam: file type/size validation, configurable 25MB limit, max 10-min recording, input sanitization, rate limiting, optional CAPTCHA toggle",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-7",
+      "summary": "Security hardening: HTTPS-only, CSRF/XSS protections, and audit log for admin actions (login, delete, download ZIP)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-8",
+      "summary": "Optional emails: student submission confirmation with Submission ID and admin notification on new submission",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-9",
+      "summary": "Polish & accessibility: mobile-first UI, upload progress bar, friendly error messages, labels and keyboard navigation",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-11",
+      "summary": "Implement backend submission creation with server-side validation and sanitization: validate required fields, validate file size (default max 25MB, configurable), validate MIME/type against allowed audio formats, compute and store checksum/hash, attempt to derive durationSeconds (when feasible), and persist a Submission record with a generated unique short ID (format like AD-8F3K2Q) and submittedAtUtc timestamp.",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-12",
+      "summary": "Implement secure audio storage and retrieval that does not embed raw audio blobs inside the main Submission record: store audio as separate binary objects keyed by a generated unique filename following: studentId_course_assessment_yyyymmdd_hhmmss_<random>.ext; store only a reference (fileKey/storagePath) in the Submission.audio metadata; provide authenticated backend endpoints/methods to stream/download audio and to support admin playback without exposing public direct access.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-16",
+      "summary": "Implement backend admin APIs to support the dashboard: list submissions with pagination, sorting, search, and filters; fetch single submission details; and return audio access for playback/download only to authenticated admins.",
+      "reqIds": [
+        "REQ-7"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-17",
+      "summary": "Update student post-submission UX: after upload, show only “Your recording has been submitted successfully.” (do not display playback, filename, download link, submission ID/timestamp, and do not allow re-access)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-18",
+      "summary": "Constrain admin access to a single account named “OP Admin”; admin password must not be hard-coded and must be set via first-time setup or environment variable, and/or changeable only by the admin after login (with strong password hashing)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-21",
+      "summary": "Implement server-side validation and sanitization for student submissions: require all fields, enforce allowed audio formats (.mp3, .wav, .m4a, .webm, .ogg), enforce max file size 25MB, and sanitize text inputs to prevent XSS or injection; return friendly, actionable errors to the frontend for display.",
+      "reqIds": [
+        "REQ-20"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-22",
+      "summary": "Store audio in private object storage using a generated filename key with the format studentId_course_assessment_yyyymmdd_hhmmss_random.ext, and store only a reference (storageKey) + audio metadata on the Submission; do not expose public file URLs.",
+      "reqIds": [
+        "REQ-21"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-23",
+      "summary": "Adjust submission requirements to support users who recorded/submitted video: either allow video file uploads (with allowed formats and validation) or make the audio file requirement conditional/optional when a recording is already provided.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-26",
+      "summary": "Extend the backend public submission API to accept either audio or video content, and persist which media type was submitted for each submission.",
+      "reqIds": [
+        "REQ-30"
+      ],
+      "status": "pending"
+    }
+  ],
+  "gameProjectType": "none",
+  "projectName": "AudioDrop – Student Audio Upload",
+  "clarification_mode": "instant",
+  "clarification_rounds": 0
+}

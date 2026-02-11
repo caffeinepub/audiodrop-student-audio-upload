@@ -1,0 +1,103 @@
+{
+  "kind": "coverage_report",
+  "version": "1.0",
+  "generatedAt": "2026-02-11T02:26:31.839Z",
+  "sources": {
+    "buildRequest": true,
+    "implementationPlan": true
+  },
+  "requirements": {
+    "total": 5,
+    "implemented": 4,
+    "items": [
+      {
+        "id": "REQ-28",
+        "summary": "Update the Student Upload form so that students can submit either an audio file OR a video file (at least one must be provided), instead of requiring an audio file in all cases.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/pages/StudentUploadPage.tsx",
+          "frontend/src/components/AudioRecorder.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/pages/StudentUploadPage.tsx",
+          "frontend/src/components/AudioRecorder.tsx"
+        ]
+      },
+      {
+        "id": "REQ-29",
+        "summary": "Add client-side validation for video uploads, including allowed extensions/MIME types and a maximum file size consistent with the existing 25MB limit, and wire the validation into the Student Upload form.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/lib/videoValidation.ts",
+          "frontend/src/pages/StudentUploadPage.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/lib/videoValidation.ts",
+          "frontend/src/pages/StudentUploadPage.tsx"
+        ]
+      },
+      {
+        "id": "REQ-30",
+        "summary": "Extend the backend public submission API to accept either audio or video content, and persist which media type was submitted for each submission.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-31",
+        "summary": "Update the Student Upload submission call to send the correct media payload (audio or video) to the backend, based on what the student provided.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/pages/StudentUploadPage.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/pages/StudentUploadPage.tsx"
+        ]
+      },
+      {
+        "id": "REQ-32",
+        "summary": "Update the Admin submission details view so it can handle video submissions: show an appropriate playback experience for video submissions (or a clear message plus download action), while preserving current audio playback for audio submissions.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/admin/AdminVideoPlayer.tsx",
+          "frontend/src/components/admin/AdminMediaDownloadButton.tsx",
+          "frontend/src/pages/admin/SubmissionDetailsPage.tsx",
+          "frontend/src/components/admin/AdminAudioDownloadButton.tsx",
+          "frontend/src/pages/admin/AdminDashboardPage.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/admin/AdminVideoPlayer.tsx",
+          "frontend/src/components/admin/AdminMediaDownloadButton.tsx",
+          "frontend/src/pages/admin/SubmissionDetailsPage.tsx",
+          "frontend/src/pages/admin/AdminDashboardPage.tsx"
+        ]
+      }
+    ]
+  },
+  "changedFiles": [
+    "backend/main.mo",
+    "backend/migration.mo",
+    "build-request.json",
+    "feature_evidence.json",
+    "frontend-file-summaries.txt",
+    "frontend-implementation-plan.json",
+    "frontend/src/backend.d.ts",
+    "frontend/src/backend.ts",
+    "frontend/src/components/AudioRecorder.tsx",
+    "frontend/src/components/admin/AdminMediaDownloadButton.tsx",
+    "frontend/src/components/admin/AdminVideoPlayer.tsx",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/lib/videoValidation.ts",
+    "frontend/src/pages/StudentUploadPage.tsx",
+    "frontend/src/pages/admin/AdminDashboardPage.tsx",
+    "frontend/src/pages/admin/SubmissionDetailsPage.tsx",
+    "project_state.json",
+    "scratch/component-selection.json",
+    "spec.md",
+    "spec_vs_diff_report.json"
+  ]
+}
