@@ -2,11 +2,11 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-when-the-user-clicks-use-this-recording-in-the-in-browser-recorder-convert-the-recorded-blob-to-an-mp3-blob-using-ffmpeg-wasm-at-128kbps-cbr-then-attach-the-resulting-mp3-as-the-selected-upload-file",
-      "featureTitle": "When the user clicks \"Use This Recording\" in the in-browser recorder, convert the recorded Blob to an MP3 Blob using FFmpeg.wasm at 128kbps CBR, then attach the resulting MP3 as the selected upload file.",
+      "featureId": "feature-update-frontend-backend-actor-initialization-to-always-use-the-generated-canister-declarations-import-no-dynamic-require-eval-and-no-environment-variable-canister-id-lookup-import-idlfactory-and-canisterid-from-declarations-backend-create-the-httpagent-with-host-https-icp0-io-for-deployed-and-keep-local-replica-host-for-dev-create-the-actor-via-actor-createactor-idlfactory-agent-canisterid-remove-any-environment-variable-based-canister-lookup-and-any-dynamic-require-eval-canisterid-resolution-paths",
+      "featureTitle": "Update frontend backend-actor initialization to always use the generated canister declarations import (no dynamic require/eval and no environment-variable canister ID lookup):\n- Import `idlFactory` and `canisterId` from `declarations/backend`\n- Create the `HttpAgent` with host `https://icp0.io` for deployed (and keep local replica host for dev)\n- Create the actor via `Actor.createActor(idlFactory, { agent, canisterId })`\n- Remove any environment-variable-based canister lookup and any dynamic `require`/`eval` canisterId resolution paths",
       "files": [
-        "frontend/src/components/AudioRecorder.tsx",
-        "frontend/src/pages/StudentUploadPage.tsx"
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/lib/icActor.ts"
       ],
       "components": [
         "authorization@4.0.0",
@@ -23,10 +23,10 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-update-the-ffmpeg-conversion-helper-so-the-produced-mp3-encoding-settings-are-128kbps-cbr-not-vbr-and-continue-returning-a-blob-with-mime-type-audio-mpeg",
-      "featureTitle": "Update the FFmpeg conversion helper so the produced MP3 encoding settings are 128kbps CBR (not VBR) and continue returning a Blob with MIME type \"audio/mpeg\".",
+      "featureId": "feature-ensure-backend-actor-creation-runs-only-after-the-browser-window-has-loaded-by-wrapping-actor-initialization-in-an-async-init-flow-and-gating-all-calls-to-getbackendactor-behind-that-initialization-e-g-wait-for-window-load-before-creating-caching-the-actor",
+      "featureTitle": "Ensure backend actor creation runs only after the browser window has loaded by wrapping actor initialization in an async init flow and gating all calls to `getBackendActor()` behind that initialization (e.g., wait for `window.load` before creating/caching the actor).",
       "files": [
-        "frontend/src/lib/ffmpeg/convertToMp3.ts"
+        "frontend/src/lib/icActor.ts"
       ],
       "components": [
         "authorization@4.0.0",
@@ -43,9 +43,11 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-when-the-user-clicks-submit-recording-ensure-the-submission-uses-the-mp3-produced-from-in-browser-recordings-as-specified-while-leaving-the-uploaded-file-flow-unchanged-uploaded-files-are-submitted-as-is",
-      "featureTitle": "When the user clicks \"Submit Recording\", ensure the submission uses the MP3 produced from in-browser recordings (as specified), while leaving the uploaded-file flow unchanged (uploaded files are submitted as-is).",
+      "featureId": "feature-add-confirm-a-lightweight-backend-health-check-runs-on-initial-page-load-and-drives-the-ui-state-on-load-call-a-simple-backend-method-prefer-getversion-if-available-otherwise-ping-is-acceptable-if-the-call-succeeds-allow-submission-submit-enabled-if-the-call-fails-show-the-user-facing-text-backend-offline-and-prevent-submission-attempts-until-healthy",
+      "featureTitle": "Add/confirm a lightweight backend health check runs on initial page load and drives the UI state:\n- On load, call a simple backend method (prefer `getVersion()` if available; otherwise `ping()` is acceptable)\n- If the call succeeds, allow submission (Submit enabled)\n- If the call fails, show the user-facing text \"Backend Offline\" and prevent submission attempts until healthy",
       "files": [
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/lib/icActor.ts",
         "frontend/src/pages/StudentUploadPage.tsx"
       ],
       "components": [
@@ -59,6 +61,28 @@
       ],
       "testIds": [
         "REQ-3"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-ensure-the-deployed-user-flow-works-end-to-end-createsubmission-must-succeed-on-the-deployed-site-using-the-initialized-actor-from-declarations-and-the-backend-offline-banner-must-not-appear-when-the-backend-is-reachable",
+      "featureTitle": "Ensure the deployed user flow works end-to-end: `createSubmission` must succeed on the deployed site using the initialized actor from declarations, and the \"Backend Offline\" banner must not appear when the backend is reachable.",
+      "files": [
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/lib/icActor.ts",
+        "frontend/src/pages/StudentUploadPage.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-4"
       ],
       "confidence": "high"
     }

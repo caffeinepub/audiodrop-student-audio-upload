@@ -1,60 +1,88 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-11T19:35:33.797Z",
+  "generatedAt": "2026-02-12T01:53:00.950Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 3,
-    "implemented": 3,
+    "total": 4,
+    "implemented": 4,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "When the user clicks \"Use This Recording\" in the in-browser recorder, convert the recorded Blob to an MP3 Blob using FFmpeg.wasm at 128kbps CBR, then attach the resulting MP3 as the selected upload file.",
+        "summary": "Update frontend backend-actor initialization to always use the generated canister declarations import (no dynamic require/eval and no environment-variable canister ID lookup):\n- Import `idlFactory` and `canisterId` from `declarations/backend`\n- Create the `HttpAgent` with host `https://icp0.io` for deployed (and keep local replica host for dev)\n- Create the actor via `Actor.createActor(idlFactory, { agent, canisterId })`\n- Remove any environment-variable-based canister lookup and any dynamic `require`/`eval` canisterId resolution paths",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/AudioRecorder.tsx",
-          "frontend/src/pages/StudentUploadPage.tsx"
+          "frontend/src/lib/icActor.ts",
+          "frontend/src/hooks/useQueries.ts"
         ],
         "matchedFiles": [
-          "frontend/src/components/AudioRecorder.tsx",
-          "frontend/src/pages/StudentUploadPage.tsx"
+          "frontend/src/lib/icActor.ts",
+          "frontend/src/hooks/useQueries.ts"
         ]
       },
       {
         "id": "REQ-2",
-        "summary": "Update the FFmpeg conversion helper so the produced MP3 encoding settings are 128kbps CBR (not VBR) and continue returning a Blob with MIME type \"audio/mpeg\".",
+        "summary": "Ensure backend actor creation runs only after the browser window has loaded by wrapping actor initialization in an async init flow and gating all calls to `getBackendActor()` behind that initialization (e.g., wait for `window.load` before creating/caching the actor).",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/lib/ffmpeg/convertToMp3.ts"
+          "frontend/src/lib/icActor.ts"
         ],
         "matchedFiles": [
-          "frontend/src/lib/ffmpeg/convertToMp3.ts"
+          "frontend/src/lib/icActor.ts"
         ]
       },
       {
         "id": "REQ-3",
-        "summary": "When the user clicks \"Submit Recording\", ensure the submission uses the MP3 produced from in-browser recordings (as specified), while leaving the uploaded-file flow unchanged (uploaded files are submitted as-is).",
+        "summary": "Add/confirm a lightweight backend health check runs on initial page load and drives the UI state:\n- On load, call a simple backend method (prefer `getVersion()` if available; otherwise `ping()` is acceptable)\n- If the call succeeds, allow submission (Submit enabled)\n- If the call fails, show the user-facing text \"Backend Offline\" and prevent submission attempts until healthy",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/pages/StudentUploadPage.tsx"
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/pages/StudentUploadPage.tsx",
+          "frontend/src/lib/icActor.ts"
         ],
         "matchedFiles": [
-          "frontend/src/pages/StudentUploadPage.tsx"
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/pages/StudentUploadPage.tsx",
+          "frontend/src/lib/icActor.ts"
+        ]
+      },
+      {
+        "id": "REQ-4",
+        "summary": "Ensure the deployed user flow works end-to-end: `createSubmission` must succeed on the deployed site using the initialized actor from declarations, and the \"Backend Offline\" banner must not appear when the backend is reachable.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/pages/StudentUploadPage.tsx",
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/lib/icActor.ts"
+        ],
+        "matchedFiles": [
+          "frontend/src/pages/StudentUploadPage.tsx",
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/lib/icActor.ts"
         ]
       }
     ]
   },
   "changedFiles": [
+    "backend/main.mo",
+    "backend/migration.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/components/AudioRecorder.tsx",
-    "frontend/src/lib/ffmpeg/convertToMp3.ts",
+    "frontend/src/backend.d.ts",
+    "frontend/src/backend.ts",
+    "frontend/src/components/AppShell.tsx",
+    "frontend/src/declarations-backend.d.ts",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/lib/icActor.ts",
     "frontend/src/pages/StudentUploadPage.tsx",
+    "frontend/src/pages/admin/AdminLoginPage.tsx",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

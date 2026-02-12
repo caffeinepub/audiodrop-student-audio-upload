@@ -20,6 +20,11 @@ export const _CaffeineStorageRefillResult = IDL.Record({
   'topped_up_amount' : IDL.Opt(IDL.Nat),
 });
 export const ExternalBlob = IDL.Vec(IDL.Nat8);
+export const BlobMetadata = IDL.Record({
+  'mimeType' : IDL.Text,
+  'filename' : IDL.Text,
+  'sizeBytes' : IDL.Nat,
+});
 export const MediaType = IDL.Variant({
   'audio' : IDL.Null,
   'video' : IDL.Null,
@@ -34,14 +39,6 @@ export const DownloadResponse = IDL.Variant({
   'forbidden' : IDL.Text,
   'notFound' : IDL.Text,
 });
-export const AdminLoginRequest = IDL.Record({
-  'username' : IDL.Text,
-  'password' : IDL.Text,
-});
-export const AdminLoginResponse = IDL.Variant({
-  'ok' : IDL.Bool,
-  'error' : IDL.Text,
-});
 export const ExistingSubmission = IDL.Record({
   'id' : IDL.Nat,
   'studentId' : IDL.Text,
@@ -54,12 +51,24 @@ export const UserRole = IDL.Variant({
   'user' : IDL.Null,
   'guest' : IDL.Null,
 });
+export const BackendStatus = IDL.Variant({
+  'degraded' : IDL.Null,
+  'offline' : IDL.Null,
+  'online' : IDL.Null,
+});
+export const HealthStatus = IDL.Record({
+  'backendStatus' : BackendStatus,
+  'backendVersion' : IDL.Text,
+});
 export const Time = IDL.Int;
 export const Submission = IDL.Record({
   'id' : IDL.Nat,
   'media' : ExternalBlob,
+  'downloadFilename' : IDL.Text,
   'studentId' : IDL.Text,
+  'originalFilename' : IDL.Text,
   'assessment' : IDL.Text,
+  'metadata' : BlobMetadata,
   'submittedBy' : IDL.Opt(IDL.Principal),
   'mediaType' : MediaType,
   'course' : IDL.Text,
@@ -99,7 +108,7 @@ export const idlService = IDL.Service({
   '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'adminCreateSubmission' : IDL.Func(
-      [IDL.Text, IDL.Text, IDL.Text, ExternalBlob, MediaType],
+      [IDL.Text, IDL.Text, IDL.Text, ExternalBlob, BlobMetadata, MediaType],
       [],
       [],
     ),
@@ -110,16 +119,15 @@ export const idlService = IDL.Service({
       [DownloadResponse],
       ['query'],
     ),
-  'adminLogin' : IDL.Func([AdminLoginRequest], [AdminLoginResponse], []),
-  'adminLogout' : IDL.Func([], [], []),
   'adminSubmissions' : IDL.Func(
       [IDL.Text],
       [IDL.Vec(ExistingSubmission)],
       ['query'],
     ),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'checkHealth' : IDL.Func([], [HealthStatus], ['query']),
   'createSubmission' : IDL.Func(
-      [IDL.Text, IDL.Text, IDL.Text, ExternalBlob, MediaType],
+      [IDL.Text, IDL.Text, IDL.Text, ExternalBlob, BlobMetadata, MediaType],
       [],
       [],
     ),
@@ -127,12 +135,12 @@ export const idlService = IDL.Service({
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getServerTime' : IDL.Func([], [IDL.Opt(Time)], []),
-  'getSessionRole' : IDL.Func([], [IDL.Opt(IDL.Text)], ['query']),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
       [IDL.Opt(UserProfile)],
       ['query'],
     ),
+  'getVersion' : IDL.Func([], [IDL.Text], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'listSubmissions' : IDL.Func([], [IDL.Vec(Submission)], ['query']),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
@@ -153,6 +161,11 @@ export const idlFactory = ({ IDL }) => {
     'topped_up_amount' : IDL.Opt(IDL.Nat),
   });
   const ExternalBlob = IDL.Vec(IDL.Nat8);
+  const BlobMetadata = IDL.Record({
+    'mimeType' : IDL.Text,
+    'filename' : IDL.Text,
+    'sizeBytes' : IDL.Nat,
+  });
   const MediaType = IDL.Variant({ 'audio' : IDL.Null, 'video' : IDL.Null });
   const DownloadResponse = IDL.Variant({
     'ok' : IDL.Record({
@@ -163,14 +176,6 @@ export const idlFactory = ({ IDL }) => {
     }),
     'forbidden' : IDL.Text,
     'notFound' : IDL.Text,
-  });
-  const AdminLoginRequest = IDL.Record({
-    'username' : IDL.Text,
-    'password' : IDL.Text,
-  });
-  const AdminLoginResponse = IDL.Variant({
-    'ok' : IDL.Bool,
-    'error' : IDL.Text,
   });
   const ExistingSubmission = IDL.Record({
     'id' : IDL.Nat,
@@ -184,12 +189,24 @@ export const idlFactory = ({ IDL }) => {
     'user' : IDL.Null,
     'guest' : IDL.Null,
   });
+  const BackendStatus = IDL.Variant({
+    'degraded' : IDL.Null,
+    'offline' : IDL.Null,
+    'online' : IDL.Null,
+  });
+  const HealthStatus = IDL.Record({
+    'backendStatus' : BackendStatus,
+    'backendVersion' : IDL.Text,
+  });
   const Time = IDL.Int;
   const Submission = IDL.Record({
     'id' : IDL.Nat,
     'media' : ExternalBlob,
+    'downloadFilename' : IDL.Text,
     'studentId' : IDL.Text,
+    'originalFilename' : IDL.Text,
     'assessment' : IDL.Text,
+    'metadata' : BlobMetadata,
     'submittedBy' : IDL.Opt(IDL.Principal),
     'mediaType' : MediaType,
     'course' : IDL.Text,
@@ -229,7 +246,7 @@ export const idlFactory = ({ IDL }) => {
     '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'adminCreateSubmission' : IDL.Func(
-        [IDL.Text, IDL.Text, IDL.Text, ExternalBlob, MediaType],
+        [IDL.Text, IDL.Text, IDL.Text, ExternalBlob, BlobMetadata, MediaType],
         [],
         [],
       ),
@@ -240,16 +257,15 @@ export const idlFactory = ({ IDL }) => {
         [DownloadResponse],
         ['query'],
       ),
-    'adminLogin' : IDL.Func([AdminLoginRequest], [AdminLoginResponse], []),
-    'adminLogout' : IDL.Func([], [], []),
     'adminSubmissions' : IDL.Func(
         [IDL.Text],
         [IDL.Vec(ExistingSubmission)],
         ['query'],
       ),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'checkHealth' : IDL.Func([], [HealthStatus], ['query']),
     'createSubmission' : IDL.Func(
-        [IDL.Text, IDL.Text, IDL.Text, ExternalBlob, MediaType],
+        [IDL.Text, IDL.Text, IDL.Text, ExternalBlob, BlobMetadata, MediaType],
         [],
         [],
       ),
@@ -257,12 +273,12 @@ export const idlFactory = ({ IDL }) => {
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getServerTime' : IDL.Func([], [IDL.Opt(Time)], []),
-    'getSessionRole' : IDL.Func([], [IDL.Opt(IDL.Text)], ['query']),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
         [IDL.Opt(UserProfile)],
         ['query'],
       ),
+    'getVersion' : IDL.Func([], [IDL.Text], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'listSubmissions' : IDL.Func([], [IDL.Vec(Submission)], ['query']),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),

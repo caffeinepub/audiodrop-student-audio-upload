@@ -52,7 +52,7 @@ export default function SubmissionDetailsPage() {
   const isVideo = submission.mediaType === MediaType.video;
 
   // Determine file extension based on media type
-  const fileExtension = isVideo ? 'mp4' : 'webm';
+  const fileExtension = isVideo ? 'mp4' : 'mp3';
   const downloadFilename = `${submission.studentId}_${submission.course}_${submission.assessment}.${fileExtension}`;
 
   return (
@@ -127,9 +127,9 @@ export default function SubmissionDetailsPage() {
         </CardHeader>
         <CardContent>
           <AdminMediaDownloadButton
-            media={submission.media}
+            mediaBlob={submission.media}
             mediaType={submission.mediaType}
-            filename={downloadFilename}
+            fileName={downloadFilename}
           />
         </CardContent>
       </Card>

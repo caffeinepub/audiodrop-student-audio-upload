@@ -1,81 +1,109 @@
 /**
- * Utilities for handling media MIME types and file extensions
+ * Utilities for mapping between MIME types and file extensions
+ * with normalization support for codec parameters
  */
 
 /**
- * Maps common MIME types to file extensions
+ * Normalizes a MIME type by removing codec parameters
+ * e.g., "audio/webm;codecs=opus" -> "audio/webm"
  */
-const MIME_TO_EXT: Record<string, string> = {
-  'audio/webm': 'webm',
-  'audio/ogg': 'ogg',
-  'audio/wav': 'wav',
-  'audio/mpeg': 'mp3',
-  'audio/mp4': 'm4a',
-  'audio/x-m4a': 'm4a',
-  'video/webm': 'webm',
-  'video/mp4': 'mp4',
-};
+export function normalizeMimeType(mimeType: string): string {
+  if (!mimeType) return 'audio/mpeg'; // Default fallback for empty/undefined
+  return mimeType.split(';')[0].trim();
+}
 
 /**
  * Maps file extensions to MIME types
  */
-const EXT_TO_MIME: Record<string, string> = {
-  'webm': 'audio/webm',
-  'ogg': 'audio/ogg',
-  'wav': 'audio/wav',
-  'mp3': 'audio/mpeg',
-  'm4a': 'audio/mp4',
-  'mp4': 'video/mp4',
+const extensionToMimeType: Record<string, string> = {
+  mp3: 'audio/mpeg',
+  wav: 'audio/wav',
+  m4a: 'audio/mp4',
+  ogg: 'audio/ogg',
+  webm: 'audio/webm',
+  mp4: 'video/mp4',
+  mov: 'video/quicktime',
+  avi: 'video/x-msvideo',
 };
 
 /**
- * Derives a file extension from a MIME type
- * @param mimeType - The MIME type (e.g., 'audio/webm')
- * @returns File extension without dot (e.g., 'webm'), defaults to 'bin' for unknown types
+ * Maps MIME types to file extensions
+ */
+const mimeTypeToExtension: Record<string, string> = {
+  'audio/mpeg': 'mp3',
+  'audio/mp3': 'mp3',
+  'audio/wav': 'wav',
+  'audio/wave': 'wav',
+  'audio/x-wav': 'wav',
+  'audio/mp4': 'm4a',
+  'audio/x-m4a': 'm4a',
+  'audio/ogg': 'ogg',
+  'audio/webm': 'webm',
+  'video/mp4': 'mp4',
+  'video/quicktime': 'mov',
+  'video/x-msvideo': 'avi',
+};
+
+/**
+ * Gets the file extension from a MIME type
  */
 export function getExtensionFromMimeType(mimeType: string): string {
-  const normalized = mimeType.toLowerCase().split(';')[0].trim();
-  return MIME_TO_EXT[normalized] || 'bin';
+  const normalized = normalizeMimeType(mimeType);
+  return mimeTypeToExtension[normalized] || 'bin';
 }
 
 /**
- * Derives a MIME type from a file extension or filename
- * @param fileNameOrExt - File name or extension (with or without dot)
- * @returns MIME type, defaults to 'application/octet-stream' for unknown types
+ * Gets the MIME type from a file extension
  */
-export function getMimeTypeFromExtension(fileNameOrExt: string): string {
-  const ext = fileNameOrExt.includes('.') 
-    ? fileNameOrExt.split('.').pop()?.toLowerCase() || ''
-    : fileNameOrExt.toLowerCase();
-  
-  return EXT_TO_MIME[ext] || 'application/octet-stream';
+export function getMimeTypeFromExtension(extension: string): string {
+  const ext = extension.toLowerCase().replace(/^\./, '');
+  return extensionToMimeType[ext] || 'application/octet-stream';
 }
 
 /**
  * Infers MIME type from backend response fields
- * @param fileType - Backend fileType field (e.g., 'webm', 'wav')
- * @param fileName - Optional filename to extract extension from
- * @returns Inferred MIME type
+ * Priority: metadata.mimeType > fileType > filename extension
  */
-export function inferMimeType(fileType?: string, fileName?: string): string {
+export function inferMimeType(
+  metadataMimeType?: string,
+  fileType?: string,
+  filename?: string
+): string {
+  // Try metadata MIME type first
+  if (metadataMimeType) {
+    return normalizeMimeType(metadataMimeType);
+  }
+
+  // Try fileType field
   if (fileType) {
-    return getMimeTypeFromExtension(fileType);
+    return normalizeMimeType(fileType);
   }
-  if (fileName) {
-    return getMimeTypeFromExtension(fileName);
+
+  // Try to infer from filename extension
+  if (filename) {
+    const match = filename.match(/\.([^.]+)$/);
+    if (match) {
+      const ext = match[1].toLowerCase();
+      return getMimeTypeFromExtension(ext);
+    }
   }
+
+  // Default fallback
   return 'application/octet-stream';
 }
 
 /**
- * Normalizes a MIME type to a safe default if unknown
- * @param mimeType - The MIME type to normalize
- * @returns Normalized MIME type
+ * Gets a safe filename with correct extension for the MIME type
  */
-export function normalizeMimeType(mimeType: string): string {
-  const normalized = mimeType.toLowerCase().split(';')[0].trim();
-  if (normalized.startsWith('audio/') || normalized.startsWith('video/')) {
-    return normalized;
-  }
-  return 'application/octet-stream';
+export function getSafeFilename(
+  baseFilename: string,
+  mimeType: string
+): string {
+  const normalized = normalizeMimeType(mimeType);
+  const correctExtension = getExtensionFromMimeType(normalized);
+  
+  // Remove existing extension if present
+  const nameWithoutExt = baseFilename.replace(/\.[^.]+$/, '');
+  
+  return `${nameWithoutExt}.${correctExtension}`;
 }

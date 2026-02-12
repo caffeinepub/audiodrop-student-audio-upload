@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAudioRecorder } from '../hooks/useAudioRecorder';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Mic, Square, Play, Pause, RotateCcw, Check, Loader2 } from 'lucide-react';
+import { Mic, Square, Play, Pause, RotateCcw, Check, Volume2, AlertCircle } from 'lucide-react';
 import { formatDuration, MAX_RECORDING_DURATION } from '../lib/audioValidation';
-import { convertToMp3 } from '../lib/ffmpeg/convertToMp3';
 import { toast } from 'sonner';
 
 interface AudioRecorderProps {
@@ -12,7 +11,10 @@ interface AudioRecorderProps {
   disabled?: boolean;
 }
 
-export default function AudioRecorder({ onRecordingComplete, disabled }: AudioRecorderProps) {
+export default function AudioRecorder({ 
+  onRecordingComplete, 
+  disabled 
+}: AudioRecorderProps) {
   const {
     isRecording,
     isPaused,
@@ -28,8 +30,38 @@ export default function AudioRecorder({ onRecordingComplete, disabled }: AudioRe
     error,
   } = useAudioRecorder();
 
-  const [isConverting, setIsConverting] = useState(false);
-  const [conversionError, setConversionError] = useState<string | null>(null);
+  const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
+  const [hasAttached, setHasAttached] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Create preview URL when recording is complete
+  useEffect(() => {
+    if (recordedBlob && !isRecording) {
+      // Revoke previous URL if exists
+      if (recordedUrl) {
+        URL.revokeObjectURL(recordedUrl);
+      }
+      const url = URL.createObjectURL(recordedBlob);
+      setRecordedUrl(url);
+      return () => {
+        URL.revokeObjectURL(url);
+      };
+    } else if (!recordedBlob) {
+      if (recordedUrl) {
+        URL.revokeObjectURL(recordedUrl);
+      }
+      setRecordedUrl(null);
+    }
+  }, [recordedBlob, isRecording]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (recordedUrl) {
+        URL.revokeObjectURL(recordedUrl);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     // Auto-stop at max duration
@@ -38,31 +70,40 @@ export default function AudioRecorder({ onRecordingComplete, disabled }: AudioRe
     }
   }, [isRecording, recordingTime, stopRecording]);
 
-  const handleAttachRecording = async () => {
-    if (!recordedBlob) return;
-
-    setIsConverting(true);
-    setConversionError(null);
+  const handleUseThisRecording = () => {
+    if (!recordedBlob) {
+      toast.error('No recording available. Please record audio first.');
+      return;
+    }
 
     try {
-      // Convert the recorded blob to MP3 at 128kbps CBR
-      const mp3Blob = await convertToMp3(recordedBlob);
+      // Create a File from the recorded blob
+      const file = new File(
+        [recordedBlob], 
+        `recording-${Date.now()}.webm`, 
+        { type: recordedBlob.type || 'audio/webm' }
+      );
 
-      // Create a File with MP3 extension and MIME type
-      const timestamp = Date.now();
-      const file = new File([mp3Blob], `recording-${timestamp}.mp3`, {
-        type: 'audio/mpeg',
-      });
-
+      // Pass the File to parent
       onRecordingComplete(file);
-      toast.success('Recording converted to MP3 and attached successfully');
+      setHasAttached(true);
+      toast.success('Recording attached successfully');
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to convert recording to MP3';
-      setConversionError(errorMessage);
-      toast.error('Failed to convert recording to MP3. Please try again.');
-      console.error('MP3 conversion error:', err);
-    } finally {
-      setIsConverting(false);
+      console.error('Error attaching recording:', err);
+      toast.error('Failed to attach recording. Please try again.');
+    }
+  };
+
+  const handleClearRecording = () => {
+    clearRecording();
+    setHasAttached(false);
+    if (recordedUrl) {
+      URL.revokeObjectURL(recordedUrl);
+      setRecordedUrl(null);
+    }
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
     }
   };
 
@@ -87,13 +128,8 @@ export default function AudioRecorder({ onRecordingComplete, disabled }: AudioRe
 
       {error && (
         <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {conversionError && (
-        <Alert variant="destructive">
-          <AlertDescription>{conversionError}</AlertDescription>
         </Alert>
       )}
 
@@ -105,19 +141,19 @@ export default function AudioRecorder({ onRecordingComplete, disabled }: AudioRe
               <span className="text-sm font-medium">Recording</span>
             </div>
           )}
-          {!isRecording && recordedBlob && !isConverting && (
+          {!isRecording && recordedBlob && !hasAttached && (
             <div className="flex items-center gap-2">
               <Check className="h-4 w-4 text-green-600" />
               <span className="text-sm font-medium">Recording complete</span>
             </div>
           )}
-          {isConverting && (
+          {!isRecording && recordedBlob && hasAttached && (
             <div className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-sm font-medium">Converting to MP3...</span>
+              <Check className="h-4 w-4 text-green-600" />
+              <span className="text-sm font-medium">Recording attached</span>
             </div>
           )}
-          {!isRecording && !recordedBlob && !isConverting && (
+          {!isRecording && !recordedBlob && (
             <span className="text-sm text-muted-foreground">Ready to record</span>
           )}
         </div>
@@ -129,11 +165,12 @@ export default function AudioRecorder({ onRecordingComplete, disabled }: AudioRe
       <div className="flex flex-wrap gap-2">
         {!isRecording && !recordedBlob && (
           <Button
+            type="button"
             onClick={startRecording}
-            disabled={disabled || isConverting}
-            className="flex-1"
+            disabled={disabled}
+            variant="default"
           >
-            <Mic className="h-4 w-4 mr-2" />
+            <Mic className="mr-2 h-4 w-4" />
             Start Recording
           </Button>
         )}
@@ -141,19 +178,21 @@ export default function AudioRecorder({ onRecordingComplete, disabled }: AudioRe
         {isRecording && !isPaused && (
           <>
             <Button
+              type="button"
               onClick={pauseRecording}
-              variant="outline"
-              className="flex-1"
+              disabled={disabled}
+              variant="secondary"
             >
-              <Pause className="h-4 w-4 mr-2" />
+              <Pause className="mr-2 h-4 w-4" />
               Pause
             </Button>
             <Button
+              type="button"
               onClick={stopRecording}
+              disabled={disabled}
               variant="destructive"
-              className="flex-1"
             >
-              <Square className="h-4 w-4 mr-2" />
+              <Square className="mr-2 h-4 w-4" />
               Stop
             </Button>
           </>
@@ -162,19 +201,21 @@ export default function AudioRecorder({ onRecordingComplete, disabled }: AudioRe
         {isRecording && isPaused && (
           <>
             <Button
+              type="button"
               onClick={resumeRecording}
-              variant="outline"
-              className="flex-1"
+              disabled={disabled}
+              variant="default"
             >
-              <Play className="h-4 w-4 mr-2" />
+              <Play className="mr-2 h-4 w-4" />
               Resume
             </Button>
             <Button
+              type="button"
               onClick={stopRecording}
+              disabled={disabled}
               variant="destructive"
-              className="flex-1"
             >
-              <Square className="h-4 w-4 mr-2" />
+              <Square className="mr-2 h-4 w-4" />
               Stop
             </Button>
           </>
@@ -183,34 +224,43 @@ export default function AudioRecorder({ onRecordingComplete, disabled }: AudioRe
         {!isRecording && recordedBlob && (
           <>
             <Button
-              onClick={clearRecording}
+              type="button"
+              onClick={handleClearRecording}
+              disabled={disabled}
               variant="outline"
-              className="flex-1"
-              disabled={isConverting}
             >
-              <RotateCcw className="h-4 w-4 mr-2" />
+              <RotateCcw className="mr-2 h-4 w-4" />
               Re-record
             </Button>
-            <Button
-              onClick={handleAttachRecording}
-              disabled={disabled || isConverting}
-              className="flex-1"
-            >
-              {isConverting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Converting...
-                </>
-              ) : (
-                <>
-                  <Check className="h-4 w-4 mr-2" />
-                  Use This Recording
-                </>
-              )}
-            </Button>
+            {!hasAttached && (
+              <Button
+                type="button"
+                onClick={handleUseThisRecording}
+                disabled={disabled}
+                variant="default"
+              >
+                <Check className="mr-2 h-4 w-4" />
+                Use This Recording
+              </Button>
+            )}
           </>
         )}
       </div>
+
+      {recordedUrl && !isRecording && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Volume2 className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Preview</span>
+          </div>
+          <audio
+            ref={audioRef}
+            src={recordedUrl}
+            controls
+            className="w-full"
+          />
+        </div>
+      )}
     </div>
   );
 }

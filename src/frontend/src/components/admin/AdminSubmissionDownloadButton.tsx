@@ -1,43 +1,40 @@
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { useState } from 'react';
 import { useActor } from '../../hooks/useActor';
 import { downloadSubmission } from '../../lib/adminDownloads';
+import { toast } from 'sonner';
 
 interface AdminSubmissionDownloadButtonProps {
   submissionId: bigint;
   variant?: 'default' | 'outline' | 'ghost';
   size?: 'default' | 'sm' | 'lg' | 'icon';
+  className?: string;
 }
 
-export default function AdminSubmissionDownloadButton({ 
+export default function AdminSubmissionDownloadButton({
   submissionId,
   variant = 'outline',
-  size = 'sm'
+  size = 'sm',
+  className,
 }: AdminSubmissionDownloadButtonProps) {
   const { actor } = useActor();
   const [isDownloading, setIsDownloading] = useState(false);
 
   const handleDownload = async () => {
     if (!actor) {
-      toast.error('Unable to download. Please refresh the page and try again.');
+      toast.error('Not connected to backend');
       return;
     }
 
+    setIsDownloading(true);
     try {
-      setIsDownloading(true);
-      
-      const result = await downloadSubmission(actor, submissionId);
-      
-      if (result.success) {
-        toast.success('Audio file downloaded successfully');
-      } else {
-        toast.error(result.error || 'Failed to download file');
-      }
-    } catch (error) {
-      console.error('Unexpected download error:', error);
-      toast.error('An unexpected error occurred. Please try again.');
+      await downloadSubmission({ submissionId, actor });
+      toast.success('Download started');
+    } catch (error: any) {
+      console.error('Download failed:', error);
+      const message = error?.message || 'Failed to download submission';
+      toast.error(message);
     } finally {
       setIsDownloading(false);
     }
@@ -45,10 +42,11 @@ export default function AdminSubmissionDownloadButton({
 
   return (
     <Button
-      onClick={handleDownload}
-      disabled={isDownloading}
       variant={variant}
       size={size}
+      onClick={handleDownload}
+      disabled={isDownloading}
+      className={className}
     >
       {isDownloading ? (
         <>

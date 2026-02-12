@@ -1,28 +1,35 @@
 import Map "mo:core/Map";
-import Time "mo:core/Time";
-import Storage "blob-storage/Storage";
+import Nat "mo:core/Nat";
 import Principal "mo:core/Principal";
+import Storage "blob-storage/Storage";
+import Time "mo:core/Time";
 
 module {
-  type OldSubmission = {
-    id : Nat;
-    studentId : Text;
-    course : Text;
-    assessment : Text;
-    submittedAtUtc : Time.Time;
-    audio : Storage.ExternalBlob;
-  };
-
   type OldActor = {
-    submissionMap : Map.Map<Nat, OldSubmission>;
+    submissionMap : Map.Map<Nat, Submission>;
+    userProfiles : Map.Map<Principal, UserProfile>;
+    nextSubmissionId : Nat;
+    sessions : Map.Map<Principal, Session>;
   };
 
-  type MediaType = {
+  type NewActor = {
+    submissionMap : Map.Map<Nat, Submission>;
+    userProfiles : Map.Map<Principal, UserProfile>;
+    nextSubmissionId : Nat;
+  };
+
+  public type MediaType = {
     #audio;
     #video;
   };
 
-  type NewSubmission = {
+  public type BlobMetadata = {
+    filename : Text;
+    mimeType : Text;
+    sizeBytes : Nat;
+  };
+
+  public type Submission = {
     id : Nat;
     studentId : Text;
     course : Text;
@@ -30,20 +37,28 @@ module {
     submittedAtUtc : Time.Time;
     media : Storage.ExternalBlob;
     mediaType : MediaType;
-    submittedBy : ?Principal; // Changed to optional
+    metadata : BlobMetadata;
+    submittedBy : ?Principal;
+    originalFilename : Text;
+    downloadFilename : Text;
   };
 
-  type NewActor = {
-    submissionMap : Map.Map<Nat, NewSubmission>;
+  public type UserProfile = {
+    name : Text;
+    email : ?Text;
   };
 
-  // No Principal.fromText, use null instead to represent anonymous principal
+  public type Session = {
+    role : ?Text;
+    createdAt : Time.Time;
+  };
+
+  // Migration function drops sessions state.
   public func run(old : OldActor) : NewActor {
-    let newSubmissionMap = old.submissionMap.map<Nat, OldSubmission, NewSubmission>(
-      func(_id, oldSub) {
-        { oldSub with media = oldSub.audio; mediaType = #audio; submittedBy = null };
-      }
-    );
-    { submissionMap = newSubmissionMap };
+    {
+      submissionMap = old.submissionMap;
+      userProfiles = old.userProfiles;
+      nextSubmissionId = old.nextSubmissionId;
+    };
   };
 };

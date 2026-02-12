@@ -1,56 +1,96 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Convert in-browser recorder output to 128kbps CBR MP3 before attach/submit",
+  "title": "Fix deployed “Backend Offline” by using generated declarations actor init and load-gated health check",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Convert the in-browser recorder Blob to a 128kbps CBR MP3 via FFmpeg.wasm when the user clicks “Use This Recording”, then attach the MP3 as the selected upload file with the correct filename and MIME type.",
+      "summary": "Initialize backend actor using generated declarations import with correct deployed host and no env/dynamic canister ID resolution.",
       "acceptanceCriteria": [
-        "Clicking \"Use This Recording\" runs FFmpeg.wasm conversion on the recorder-produced Blob (not on uploaded files).",
-        "After clicking \"Use This Recording\", the form's selected file is an MP3 File/Blob with MIME type exactly \"audio/mpeg\".",
-        "After clicking \"Use This Recording\", the attached filename matches the pattern \"recording-<timestamp>.mp3\"."
+        "`frontend/src/lib/icActor.ts` (and any other actor-creation code paths) imports `idlFactory` and `canisterId` from `declarations/backend` and does not read canister IDs from `import.meta.env`.",
+        "The deployed frontend uses `https://icp0.io` as the agent host (local dev continues to use the local replica host).",
+        "No code path hardcodes a canister ID string; only the `canisterId` export from `declarations/backend` is used.",
+        "App no longer relies on `eval('require')` or similar runtime module loading to find `canisterId`."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/AudioRecorder.tsx",
+          "path": "frontend/src/lib/icActor.ts",
           "operation": "modify",
-          "description": "Update the “Use This Recording” action to asynchronously convert the internal recordedBlob to MP3 using the existing FFmpeg.wasm helper (convertToMp3), then create and pass a File named \"recording-<timestamp>.mp3\" with type exactly \"audio/mpeg\" to onRecordingComplete. Add local conversion loading/error handling so the user can’t attach the pre-conversion blob."
+          "description": "Replace canister-id resolution (remove eval/require and all import.meta.env lookups) by statically importing `idlFactory` and `canisterId` from `declarations/backend`; update agent host selection to use local replica host in dev and `https://icp0.io` when deployed; create the actor via `Actor.createActor(idlFactory, { agent, canisterId })` with no hardcoded IDs."
         },
         {
-          "path": "frontend/src/pages/StudentUploadPage.tsx",
+          "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Ensure the recorder callback path accepts and stores the MP3 File produced by AudioRecorder as the selected audioFile, and maintains existing validation/toast behavior. Do not apply conversion logic to uploaded files."
+          "description": "Align any direct actor creation/calls used for student submission and health probing to rely solely on `getBackendActor()` from `frontend/src/lib/icActor.ts` after it is updated to use generated declarations, ensuring no alternate canister ID resolution paths remain."
         }
       ]
     },
     {
       "id": "REQ-2",
-      "summary": "Adjust the FFmpeg.wasm conversion helper to enforce 128kbps constant bitrate (CBR) MP3 output and return a non-empty Blob typed as audio/mpeg.",
+      "summary": "Defer actor creation until after window load and ensure all backend calls await the initialization flow.",
       "acceptanceCriteria": [
-        "The FFmpeg invocation used by the app enforces 128kbps constant bitrate output for MP3 conversion.",
-        "The conversion helper returns a non-empty Blob whose type is \"audio/mpeg\"."
+        "On a deployed build, actor creation does not run until after the `window` load event fires.",
+        "Calls that need the actor (e.g., submission creation and health check) wait for initialization rather than receiving `undefined`/null actor values or failing due to premature initialization.",
+        "No runtime errors occur on first page load related to actor initialization order."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/lib/ffmpeg/convertToMp3.ts",
+          "path": "frontend/src/lib/icActor.ts",
           "operation": "modify",
-          "description": "Modify the FFmpeg args to explicitly enforce 128kbps CBR (e.g., set bitrate and min/max rate consistently and disable VBR/Xing header as appropriate) while continuing to return a non-empty Blob with type exactly \"audio/mpeg\"."
+          "description": "Introduce an async initialization gate that waits for the browser `window` load event before creating/caching the actor; ensure `getBackendActor()` always awaits this init gate so all callers (health checks and submission creation) are safely sequenced."
         }
       ]
     },
     {
       "id": "REQ-3",
-      "summary": "On “Submit Recording”, submit the MP3 bytes for in-browser recordings while leaving the uploaded-file submission flow unchanged (uploaded files submitted as-is, no FFmpeg conversion).",
+      "summary": "Run a lightweight health check on student upload page load and gate submission/UI state on the result, showing “Backend Offline” on failure.",
       "acceptanceCriteria": [
-        "Submitting after attaching an in-browser recording uploads the MP3 bytes (not the original recorded container).",
-        "Submitting an uploaded audio file does not trigger MP3 conversion and preserves the original file name/type behavior."
+        "A health check is executed automatically when the student upload page loads (no manual user action required).",
+        "When the health check succeeds, the Submit button can be used (assuming other form validations pass).",
+        "When the health check fails, the UI shows exactly \"Backend Offline\" (English) and submission is blocked with a clear error.",
+        "If `getVersion()` is used, the backend canister exposes it and it can be called as a simple health probe; otherwise `ping()` remains functional and used consistently."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Update the `useBackendHealth` query to use a lightweight backend method as the probe (prefer `getVersion()` per available declarations) and to treat failures as unhealthy without throwing unhandled errors; ensure it awaits `getBackendActor()` (which is load-gated per REQ-2)."
+        },
+        {
+          "path": "frontend/src/pages/StudentUploadPage.tsx",
+          "operation": "modify",
+          "description": "Ensure the health check runs on initial page load via the existing `useBackendHealth()` usage; gate form validity and submit attempts on a confirmed healthy state; update the offline banner text to exactly \"Backend Offline\" (matching capitalization) and update any offline toast/error text to English and consistent with the banner."
+        },
+        {
+          "path": "frontend/src/lib/icActor.ts",
+          "operation": "modify",
+          "description": "Align any shared health-check helper (if used) to the same probe method chosen in `useBackendHealth` (prefer `getVersion()`), so health checks are consistent and do not rely on non-existent methods."
+        }
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "summary": "Ensure deployed submission flow succeeds end-to-end using the declarations-based actor and no false “Backend Offline” banner when reachable.",
+      "acceptanceCriteria": [
+        "On the deployed site, a healthy backend does not show the \"Backend Offline\" banner.",
+        "On the deployed site, submitting a valid audio submission successfully calls `createSubmission` and reaches the success screen.",
+        "No actor-related initialization errors occur in the browser console during the submission flow."
       ],
       "file_operations": [
         {
           "path": "frontend/src/pages/StudentUploadPage.tsx",
           "operation": "modify",
-          "description": "Track whether the selected audioFile came from in-browser recording vs file upload (e.g., a small piece of local state set in handleRecordingComplete vs handleAudioFileChange). In handleSubmit, ensure the recording-origin file being submitted is the MP3 (type \"audio/mpeg\" and .mp3 name) produced on attach; if not, block submission with a user-facing error. Keep the uploaded-file path unchanged (no conversion; preserve current originalFileName/mimeType behavior)."
+          "description": "Tighten submission gating so submit is disabled until the health check has succeeded, and ensure the submit handler blocks attempts when unhealthy with a clear English error; keep navigation to the success screen on successful `createSubmission` mutation."
+        },
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Ensure `useCreateSubmission` relies on the updated `getBackendActor()` (declarations-based, load-gated) and surfaces actor/connection failures with clear English errors suitable for the student submission flow."
+        },
+        {
+          "path": "frontend/src/lib/icActor.ts",
+          "operation": "modify",
+          "description": "Harden actor initialization error messages and caching behavior for the anonymous (student) flow so deployed builds consistently use the declarations-based canisterId and the correct agent host, preventing spurious offline states when the backend is reachable."
         }
       ]
     }

@@ -1,84 +1,98 @@
 {
   "kind": "build_request",
-  "title": "Convert in-browser recordings to MP3 (FFmpeg.wasm) on attach/submit",
-  "priority": "normal",
+  "title": "Fix deployed app showing “Backend Offline” by initializing IC actor from generated declarations and gating submit on health check",
+  "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "When the user clicks \"Use This Recording\" in the in-browser recorder, convert the recorded Blob to an MP3 Blob using FFmpeg.wasm at 128kbps CBR, then attach the resulting MP3 as the selected upload file.",
+      "text": "Update frontend backend-actor initialization to always use the generated canister declarations import (no dynamic require/eval and no environment-variable canister ID lookup):\n- Import `idlFactory` and `canisterId` from `declarations/backend`\n- Create the `HttpAgent` with host `https://icp0.io` for deployed (and keep local replica host for dev)\n- Create the actor via `Actor.createActor(idlFactory, { agent, canisterId })`\n- Remove any environment-variable-based canister lookup and any dynamic `require`/`eval` canisterId resolution paths",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-user"
         ],
         "quotes": [
-          "Wire MP3 conversion ONLY for in-browser recordings.\n\n- When user clicks \"Use This Recording\" or \"Submit Recording\":\n   convert the recorded Blob to MP3 using FFmpeg.wasm at 128kbps CBR.\n- Replace the upload file with the MP3 Blob.\n- Set filename to something like: recording-<timestamp>.mp3\n- Set mimeType to audio/mpeg.\nDo not modify file-upload path yet (uploaded files can remain unchanged for now)."
+          "Ensure actor is created using generated declarations:\n   import { Actor, HttpAgent } from \"@dfinity/agent\"\n   import { idlFactory, canisterId } from \"declarations/backend\"",
+          "Do NOT hardcode canisterId.\n   Use the exported canisterId from declarations.",
+          "Remove any environment-variable-based canister lookup."
         ]
       },
       "acceptanceCriteria": [
-        "Clicking \"Use This Recording\" runs FFmpeg.wasm conversion on the recorder-produced Blob (not on uploaded files).",
-        "After clicking \"Use This Recording\", the form's selected file is an MP3 File/Blob with MIME type exactly \"audio/mpeg\".",
-        "After clicking \"Use This Recording\", the attached filename matches the pattern \"recording-<timestamp>.mp3\"."
+        "`frontend/src/lib/icActor.ts` (and any other actor-creation code paths) imports `idlFactory` and `canisterId` from `declarations/backend` and does not read canister IDs from `import.meta.env`.",
+        "The deployed frontend uses `https://icp0.io` as the agent host (local dev continues to use the local replica host).",
+        "No code path hardcodes a canister ID string; only the `canisterId` export from `declarations/backend` is used.",
+        "App no longer relies on `eval('require')` or similar runtime module loading to find `canisterId`."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Update the FFmpeg conversion helper so the produced MP3 encoding settings are 128kbps CBR (not VBR) and continue returning a Blob with MIME type \"audio/mpeg\".",
+      "text": "Ensure backend actor creation runs only after the browser window has loaded by wrapping actor initialization in an async init flow and gating all calls to `getBackendActor()` behind that initialization (e.g., wait for `window.load` before creating/caching the actor).",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-user"
         ],
         "quotes": [
-          "convert the recorded Blob to MP3 using FFmpeg.wasm at 128kbps CBR.",
-          "Set mimeType to audio/mpeg."
+          "Ensure this actor creation runs only after window loads.\n   Wrap in async init function."
         ]
       },
       "acceptanceCriteria": [
-        "The FFmpeg invocation used by the app enforces 128kbps constant bitrate output for MP3 conversion.",
-        "The conversion helper returns a non-empty Blob whose type is \"audio/mpeg\"."
+        "On a deployed build, actor creation does not run until after the `window` load event fires.",
+        "Calls that need the actor (e.g., submission creation and health check) wait for initialization rather than receiving `undefined`/null actor values or failing due to premature initialization.",
+        "No runtime errors occur on first page load related to actor initialization order."
       ]
     },
     {
       "id": "REQ-3",
-      "text": "When the user clicks \"Submit Recording\", ensure the submission uses the MP3 produced from in-browser recordings (as specified), while leaving the uploaded-file flow unchanged (uploaded files are submitted as-is).",
-      "target": "frontend",
+      "text": "Add/confirm a lightweight backend health check runs on initial page load and drives the UI state:\n- On load, call a simple backend method (prefer `getVersion()` if available; otherwise `ping()` is acceptable)\n- If the call succeeds, allow submission (Submit enabled)\n- If the call fails, show the user-facing text \"Backend Offline\" and prevent submission attempts until healthy",
+      "target": "both",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-user"
         ],
         "quotes": [
-          "Do not modify file-upload path yet (uploaded files can remain unchanged for now)."
+          "Add a small health check on page load:\n   await actor.getVersion() or any simple method.\n   If success → enable Submit.\n   If fail → show \"Backend Offline\"."
         ]
       },
       "acceptanceCriteria": [
-        "Submitting after attaching an in-browser recording uploads the MP3 bytes (not the original recorded container).",
-        "Submitting an uploaded audio file does not trigger MP3 conversion and preserves the original file name/type behavior."
+        "A health check is executed automatically when the student upload page loads (no manual user action required).",
+        "When the health check succeeds, the Submit button can be used (assuming other form validations pass).",
+        "When the health check fails, the UI shows exactly \"Backend Offline\" (English) and submission is blocked with a clear error.",
+        "If `getVersion()` is used, the backend canister exposes it and it can be called as a simple health probe; otherwise `ping()` remains functional and used consistently."
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "text": "Ensure the deployed user flow works end-to-end: `createSubmission` must succeed on the deployed site using the initialized actor from declarations, and the \"Backend Offline\" banner must not appear when the backend is reachable.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-user"
+        ],
+        "quotes": [
+          "Deliverable:\nSubmit works on deployed site.\nNo \"Backend Offline\" banner."
+        ]
+      },
+      "acceptanceCriteria": [
+        "On the deployed site, a healthy backend does not show the \"Backend Offline\" banner.",
+        "On the deployed site, submitting a valid audio submission successfully calls `createSubmission` and reaches the success screen.",
+        "No actor-related initialization errors occur in the browser console during the submission flow."
       ]
     }
   ],
   "constraints": [
-    "Do not change the uploaded-file path/flow at this time; only in-browser recordings are converted to MP3.",
-    "Do not add backend changes for this request (no Motoko API/schema changes).",
-    "Do not edit frontend files in immutablePaths (e.g., frontend/src/hooks/useActor.ts, frontend/src/hooks/useInternetIdentity.ts(x), frontend/src/main.tsx, or frontend/src/components/ui/*)."
+    "Do not hardcode canister IDs anywhere; use only `canisterId` exported by `declarations/backend`.",
+    "Remove environment-variable-based canister lookup for the backend canister ID.",
+    "All user-facing text introduced/modified by this change must be in English.",
+    "Do not edit files under `frontend/src/hooks/useInternetIdentity.ts`, `frontend/src/hooks/useInternetIdentity.tsx`, `frontend/src/hooks/useActor.ts`, `frontend/src/main.tsx`, or `frontend/src/components/ui`."
   ],
   "nonGoals": [
-    "Server-side audio conversion.",
-    "Converting user-uploaded files to MP3.",
-    "Changing validation rules, size limits, or submission metadata beyond filename/mimeType for converted in-browser recordings."
+    "Adding new authentication providers (only Internet Identity is supported).",
+    "Introducing external databases or non-IC hosting/deployment changes.",
+    "Implementing real-time communication features (websockets/push)."
   ],
   "imageRequirements": {
     "required": [],
     "edits": []
-  },
-  "userProfileUpdate": {
-    "goalsToAdd": [],
-    "goalsToRemove": [],
-    "preferencesToAdd": [],
-    "preferencesToRemove": [],
-    "miscToAdd": [],
-    "miscToRemove": [],
-    "fieldsToSet": {},
-    "fieldsToDelete": []
   }
 }

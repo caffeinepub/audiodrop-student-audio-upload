@@ -1,82 +1,69 @@
-import type { DownloadResponse } from '../backend';
-import { downloadFile } from './downloads';
-import { inferMimeType } from './mediaMime';
+/**
+ * Helper function for admin submission downloads
+ */
 
-export interface AdminDownloadResult {
-  success: boolean;
-  error?: string;
+import { ExternalBlob } from '../backend';
+
+export interface DownloadSubmissionParams {
+  submissionId: bigint;
+  actor: any;
 }
 
 /**
- * Downloads a submission file via the backend adminDownloadSubmission endpoint
- * @param actor - The backend actor instance
- * @param submissionId - The submission ID to download
- * @returns Result object with success status and optional error message
+ * Downloads a submission file for admin users
+ * Calls backend adminDownloadSubmission endpoint and triggers browser download
+ * Enforces MP3 download semantics: audio/mpeg MIME type and <submissionId>.mp3 filename
  */
-export async function downloadSubmission(
-  actor: any,
-  submissionId: bigint
-): Promise<AdminDownloadResult> {
-  try {
-    const response: DownloadResponse = await actor.adminDownloadSubmission(submissionId);
+export async function downloadSubmission({ submissionId, actor }: DownloadSubmissionParams): Promise<void> {
+  if (!actor) {
+    throw new Error('Actor not available');
+  }
 
+  try {
+    // Call backend download endpoint
+    const response = await actor.adminDownloadSubmission(submissionId);
+
+    // Handle response variants
     if (response.__kind__ === 'forbidden') {
-      return {
-        success: false,
-        error: 'You do not have permission to download this file. Admin access required.',
-      };
+      throw new Error('Access denied: Admin session required');
     }
 
     if (response.__kind__ === 'notFound') {
-      return {
-        success: false,
-        error: 'Submission not found. It may have been deleted.',
-      };
+      throw new Error('Submission not found');
     }
 
-    if (response.__kind__ === 'ok') {
-      const { data, originalFileName, fileType } = response.ok;
-      
-      // Infer MIME type from backend response fields
-      const mimeType = inferMimeType(fileType, originalFileName);
-      
-      // Fetch real bytes from ExternalBlob
-      const bytes = await data.getBytes();
-      
-      // Create blob from actual bytes
-      const blob = new Blob([bytes], { type: mimeType });
-      
-      // Trigger download using the helper
-      downloadFile(blob, originalFileName);
-      
-      return { success: true };
+    if (response.__kind__ !== 'ok') {
+      throw new Error('Failed to download submission');
     }
 
-    return {
-      success: false,
-      error: 'Unexpected response from server. Please try again.',
-    };
-  } catch (error: any) {
+    const { data } = response.ok;
+
+    // Fetch bytes from ExternalBlob (the actual stored MP3 bytes)
+    const bytes = await data.getBytes();
+
+    if (!bytes || bytes.length === 0) {
+      throw new Error('Downloaded file is empty');
+    }
+
+    // Enforce MP3 download semantics
+    const mimeType = 'audio/mpeg';
+    const downloadFilename = `${submissionId}.mp3`;
+
+    // Create blob with MP3 MIME type and trigger download
+    const blob = new Blob([bytes], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = downloadFilename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Clean up
+    URL.revokeObjectURL(url);
+  } catch (error) {
     console.error('Download error:', error);
-    
-    // Handle network and other errors
-    if (error?.message?.includes('Forbidden') || error?.message?.includes('Admin')) {
-      return {
-        success: false,
-        error: 'You do not have permission to download this file. Admin access required.',
-      };
-    }
-    
-    if (error?.message?.includes('not found')) {
-      return {
-        success: false,
-        error: 'Submission not found. It may have been deleted.',
-      };
-    }
-    
-    return {
-      success: false,
-      error: 'Failed to download file. Please check your connection and try again.',
-    };
+    throw error;
   }
 }

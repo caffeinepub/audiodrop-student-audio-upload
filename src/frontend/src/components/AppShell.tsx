@@ -1,23 +1,14 @@
 import { Link, useLocation } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
-import { useAdminSession } from '../hooks/useQueries';
-import { Music, Settings, FileText, LogOut } from 'lucide-react';
+import { useIsAdmin } from '../hooks/useQueries';
+import { Music, Settings, FileText } from 'lucide-react';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  const { data: session, logout } = useAdminSession();
-  const isAuthenticated = !!session;
+  const { data: isAdmin } = useIsAdmin();
 
   // Hide header and footer on success page
   const isSuccessPage = location.pathname === '/success';
-
-  const handleLogout = async () => {
-    try {
-      await logout.mutateAsync();
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
-  };
 
   if (isSuccessPage) {
     return (
@@ -40,7 +31,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
 
             <nav className="flex items-center gap-4">
-              {isAuthenticated ? (
+              {isAdmin ? (
                 <>
                   <Link to="/admin/dashboard">
                     <Button variant="ghost" size="sm">
@@ -60,23 +51,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                       Settings
                     </Button>
                   </Link>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleLogout}
-                    disabled={logout.isPending}
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Logout
-                  </Button>
                 </>
-              ) : (
-                <Link to="/admin/login">
-                  <Button variant="outline" size="sm">
-                    Admin Login
-                  </Button>
-                </Link>
-              )}
+              ) : null}
             </nav>
           </div>
         </div>

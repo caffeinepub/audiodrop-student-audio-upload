@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from './useActor';
-import type { Submission, UserProfile, MediaType } from '../backend';
+import type { Submission, UserProfile, MediaType, BlobMetadata } from '../backend';
 import { ExternalBlob } from '../backend';
-import * as adminApi from '../lib/adminApi';
+import { getBackendActor } from '../lib/icActor';
 
 // User Profile Queries
 export function useGetCallerUserProfile() {
@@ -52,12 +52,12 @@ export function useGetAllSubmissions() {
       }
       
       try {
-        // Call listSubmissions which checks session.role === "admin" on backend
+        // Call listSubmissions which checks admin permissions on backend
         const submissions = await actor.listSubmissions();
         return submissions;
       } catch (error: any) {
         // Handle backend authorization errors
-        if (error?.message?.includes('Forbidden') || error?.message?.includes('Admin session required')) {
+        if (error?.message?.includes('Forbidden') || error?.message?.includes('Unauthorized')) {
           throw new Error('You do not have permission to view submissions. Please ensure you are logged in as an administrator.');
         }
         throw error;
@@ -84,7 +84,6 @@ export function useGetSubmission(id: bigint | null) {
 }
 
 export function useCreateSubmission() {
-  const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -98,16 +97,28 @@ export function useCreateSubmission() {
       mimeType: string;
       sizeBytes: number;
     }) => {
-      if (!actor) throw new Error('Actor not available');
+      // Get actor directly from centralized module (waits for window load)
+      const actor = await getBackendActor();
+      
+      if (!actor) {
+        throw new Error('Backend not connected. Canister actor is unavailable.');
+      }
       
       try {
-        // Note: Backend currently doesn't accept metadata parameters
-        // This will be updated when backend is modified to accept originalFileName, mimeType, sizeBytes
+        // Create metadata object for backend
+        const metadata: BlobMetadata = {
+          filename: params.originalFileName,
+          mimeType: params.mimeType,
+          sizeBytes: BigInt(params.sizeBytes),
+        };
+
+        // Call backend with all required parameters including metadata and mediaType
         return await actor.createSubmission(
           params.studentId,
           params.course,
           params.assessment,
           params.media,
+          metadata,
           params.mediaType
         );
       } catch (error: any) {
@@ -139,92 +150,6 @@ export function useDeleteSubmission() {
   });
 }
 
-// Admin Session Management
-export function useAdminSession() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  // Set actor instance for adminApi when actor is available
-  if (actor) {
-    adminApi.setActorInstance(actor);
-  }
-
-  const sessionQuery = useQuery({
-    queryKey: ['adminSession'],
-    queryFn: () => adminApi.checkAdminSession(),
-    retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: !!actor,
-  });
-
-  const loginMutation = useMutation({
-    mutationFn: (credentials: { username: string; password: string }) =>
-      adminApi.adminLogin(credentials),
-    onSuccess: (result) => {
-      if (result.ok) {
-        queryClient.setQueryData(['adminSession'], true);
-        queryClient.invalidateQueries({ queryKey: ['submissions'] });
-      }
-    },
-  });
-
-  const logoutMutation = useMutation({
-    mutationFn: () => adminApi.adminLogout(),
-    onSuccess: () => {
-      queryClient.setQueryData(['adminSession'], false);
-      queryClient.clear();
-    },
-  });
-
-  return {
-    data: sessionQuery.data,
-    isLoading: sessionQuery.isLoading,
-    login: loginMutation,
-    logout: logoutMutation,
-  };
-}
-
-// Admin Login Hook
-export function useAdminLogin() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (credentials: { username: string; password: string }) => {
-      if (!actor) throw new Error('Actor not available');
-      
-      const response = await actor.adminLogin(credentials);
-      
-      if (response.__kind__ === 'error') {
-        throw new Error(response.error);
-      }
-      
-      return response.ok;
-    },
-    onSuccess: () => {
-      queryClient.setQueryData(['adminSession'], true);
-      queryClient.invalidateQueries({ queryKey: ['submissions'] });
-    },
-  });
-}
-
-// Admin Logout Hook
-export function useAdminLogout() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async () => {
-      if (!actor) throw new Error('Actor not available');
-      return actor.adminLogout();
-    },
-    onSuccess: () => {
-      queryClient.setQueryData(['adminSession'], false);
-      queryClient.clear();
-    },
-  });
-}
-
 // Check if current user is admin
 export function useIsAdmin() {
   const { actor, isFetching } = useActor();
@@ -233,12 +158,39 @@ export function useIsAdmin() {
     queryKey: ['isAdmin'],
     queryFn: async () => {
       if (!actor) return false;
-      const role = await actor.getSessionRole();
-      return role === 'admin';
+      try {
+        return await actor.isCallerAdmin();
+      } catch (error) {
+        console.error('Failed to check admin status:', error);
+        return false;
+      }
     },
     enabled: !!actor && !isFetching,
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+}
+
+// Backend health check hook - uses getVersion() for lightweight probe
+export function useBackendHealth() {
+  return useQuery<boolean>({
+    queryKey: ['backendHealth'],
+    queryFn: async () => {
+      try {
+        const actor = await getBackendActor();
+        const version = await actor.getVersion();
+        // Health check passes if we get a non-empty version string
+        return typeof version === 'string' && version.length > 0;
+      } catch (error) {
+        console.error('Backend health check failed:', error);
+        return false;
+      }
+    },
+    retry: 3,
+    retryDelay: 1000,
+    staleTime: 30000, // 30 seconds
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
   });
 }
 

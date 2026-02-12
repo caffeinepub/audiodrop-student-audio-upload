@@ -1,12 +1,13 @@
 # Specification
 
 ## Summary
-**Goal:** Convert in-browser recorder audio to MP3 (via FFmpeg.wasm) when the user attaches or submits a recording, without changing the uploaded-file flow.
+**Goal:** Fix the deployed app incorrectly showing “Backend Offline” by initializing the Internet Computer backend actor using generated canister declarations and gating submission on a load-time health check.
 
 **Planned changes:**
-- On “Use This Recording”, run FFmpeg.wasm to convert the recorder-produced Blob to an MP3 at 128kbps CBR, then replace the selected/attached file with the resulting MP3.
-- Ensure the attached MP3 is created with MIME type exactly `audio/mpeg` and a filename matching `recording-<timestamp>.mp3`.
-- Update the FFmpeg conversion helper to enforce 128kbps constant bitrate (CBR) MP3 output and return a non-empty `audio/mpeg` Blob.
-- On “Submit Recording”, submit the converted MP3 bytes for in-browser recordings, while leaving uploaded audio files unchanged (no conversion; preserve existing name/type behavior).
+- Update frontend actor initialization to import `idlFactory` and `canisterId` from `declarations/backend`, remove any env-var or dynamic require/eval canister ID resolution, and create the actor via `Actor.createActor(idlFactory, { agent, canisterId })`.
+- Configure the `HttpAgent` to use `https://icp0.io` when deployed, while keeping the local replica host for development.
+- Wrap actor initialization in an async init flow that runs only after the browser `window` load event, and ensure all `getBackendActor()` consumers await initialization.
+- Add/confirm a lightweight backend health check on initial page load (prefer `getVersion()`, otherwise `ping()`), showing exactly “Backend Offline” and disabling Submit while unhealthy, and enabling Submit once healthy.
+- Verify the deployed submission flow works end-to-end: `createSubmission` succeeds using the initialized actor and the “Backend Offline” banner does not appear when the backend is reachable.
 
-**User-visible outcome:** When recording in the browser and clicking “Use This Recording” (and then submitting), the app attaches/uploads an MP3 file (`audio/mpeg`, `recording-<timestamp>.mp3`). Uploaded audio files continue to upload as-is.
+**User-visible outcome:** On the deployed site, the app no longer shows “Backend Offline” when the backend is reachable, and users can successfully submit audio via `createSubmission`; if the backend is unreachable, “Backend Offline” is shown and submission is blocked until healthy.

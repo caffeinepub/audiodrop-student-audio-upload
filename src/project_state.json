@@ -1,34 +1,45 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "Implement MP3 conversion (FFmpeg.wasm) for in-browser recordings only, triggered on submission actions, while leaving uploaded-file path unchanged.",
+  "summary": "Internet Computer (DFINITY) web app where the frontend must initialize a backend canister actor correctly to avoid showing \"Backend Offline\" and allow createSubmission on the deployed site.",
   "architectural_notes": [
-    "MP3 conversion should apply only to in-browser recordings and be triggered on 'Use This Recording' or 'Submit Recording'; uploaded files remain unchanged for now."
+    "Initialize the backend canister actor using generated declarations (idlFactory + exported canisterId) via @dfinity/agent HttpAgent targeting https://icp0.io, and run initialization only after window load (async init).",
+    "Do not hardcode canisterId or use environment-variable-based canister lookup; rely on declarations export."
   ],
-  "known_issues": [],
-  "isFixRequest": false,
+  "known_issues": [
+    "Deployed frontend shows \"Backend Offline\" and cannot call createSubmission due to actor being undefined or failing to initialize."
+  ],
+  "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-when-the-user-clicks-use-this-recording-in-the-in-browser-recorder-convert-the-recorded-blob-to-an-mp3-blob-using-ffmpeg-wasm-at-128kbps-cbr-then-attach-the-resulting-mp3-as-the-selected-upload-file",
-      "title": "When the user clicks \"Use This Recording\" in the in-browser recorder, convert the recorded Blob to an MP3 Blob using FFmpeg.wasm at 128kbps CBR, then attach the resulting MP3 as the selected upload file.",
+      "id": "feature-update-frontend-backend-actor-initialization-to-always-use-the-generated-canister-declarations-import-no-dynamic-require-eval-and-no-environment-variable-canister-id-lookup-import-idlfactory-and-canisterid-from-declarations-backend-create-the-httpagent-with-host-https-icp0-io-for-deployed-and-keep-local-replica-host-for-dev-create-the-actor-via-actor-createactor-idlfactory-agent-canisterid-remove-any-environment-variable-based-canister-lookup-and-any-dynamic-require-eval-canisterid-resolution-paths",
+      "title": "Update frontend backend-actor initialization to always use the generated canister declarations import (no dynamic require/eval and no environment-variable canister ID lookup):\n- Import `idlFactory` and `canisterId` from `declarations/backend`\n- Create the `HttpAgent` with host `https://icp0.io` for deployed (and keep local replica host for dev)\n- Create the actor via `Actor.createActor(idlFactory, { agent, canisterId })`\n- Remove any environment-variable-based canister lookup and any dynamic `require`/`eval` canisterId resolution paths",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-update-the-ffmpeg-conversion-helper-so-the-produced-mp3-encoding-settings-are-128kbps-cbr-not-vbr-and-continue-returning-a-blob-with-mime-type-audio-mpeg",
-      "title": "Update the FFmpeg conversion helper so the produced MP3 encoding settings are 128kbps CBR (not VBR) and continue returning a Blob with MIME type \"audio/mpeg\".",
+      "id": "feature-ensure-backend-actor-creation-runs-only-after-the-browser-window-has-loaded-by-wrapping-actor-initialization-in-an-async-init-flow-and-gating-all-calls-to-getbackendactor-behind-that-initialization-e-g-wait-for-window-load-before-creating-caching-the-actor",
+      "title": "Ensure backend actor creation runs only after the browser window has loaded by wrapping actor initialization in an async init flow and gating all calls to `getBackendActor()` behind that initialization (e.g., wait for `window.load` before creating/caching the actor).",
       "reqIds": [
         "REQ-2"
       ],
       "version": 1
     },
     {
-      "id": "feature-when-the-user-clicks-submit-recording-ensure-the-submission-uses-the-mp3-produced-from-in-browser-recordings-as-specified-while-leaving-the-uploaded-file-flow-unchanged-uploaded-files-are-submitted-as-is",
-      "title": "When the user clicks \"Submit Recording\", ensure the submission uses the MP3 produced from in-browser recordings (as specified), while leaving the uploaded-file flow unchanged (uploaded files are submitted as-is).",
+      "id": "feature-add-confirm-a-lightweight-backend-health-check-runs-on-initial-page-load-and-drives-the-ui-state-on-load-call-a-simple-backend-method-prefer-getversion-if-available-otherwise-ping-is-acceptable-if-the-call-succeeds-allow-submission-submit-enabled-if-the-call-fails-show-the-user-facing-text-backend-offline-and-prevent-submission-attempts-until-healthy",
+      "title": "Add/confirm a lightweight backend health check runs on initial page load and drives the UI state:\n- On load, call a simple backend method (prefer `getVersion()` if available; otherwise `ping()` is acceptable)\n- If the call succeeds, allow submission (Submit enabled)\n- If the call fails, show the user-facing text \"Backend Offline\" and prevent submission attempts until healthy",
       "reqIds": [
         "REQ-3"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-the-deployed-user-flow-works-end-to-end-createsubmission-must-succeed-on-the-deployed-site-using-the-initialized-actor-from-declarations-and-the-backend-offline-banner-must-not-appear-when-the-backend-is-reachable",
+      "title": "Ensure the deployed user flow works end-to-end: `createSubmission` must succeed on the deployed site using the initialized actor from declarations, and the \"Backend Offline\" banner must not appear when the backend is reachable.",
+      "reqIds": [
+        "REQ-4"
       ],
       "version": 1
     }
@@ -36,12 +47,12 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Convert in-browser recorded audio Blob to MP3 (FFmpeg.wasm, 128kbps CBR) on 'Use This Recording' / 'Submit Recording', replacing upload file with MP3 Blob and setting filename/mimeType; do not alter uploaded-file flow",
+      "summary": "Add backend health-check on page load (e.g., actor.getVersion) to toggle Submit enabled state and show/hide \"Backend Offline\" banner.",
       "reqIds": [],
       "status": "pending"
     }
   ],
-  "projectName": "Convert in-browser recordings to MP3 (FFmpeg.wasm) on attach/submit",
+  "projectName": "Fix deployed app showing “Backend Offline” by initializing IC actor from generated declarations and gating submit on health check",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

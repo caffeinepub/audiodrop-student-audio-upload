@@ -10,9 +10,14 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
-export interface AdminLoginRequest { 'username' : string, 'password' : string }
-export type AdminLoginResponse = { 'ok' : boolean } |
-  { 'error' : string };
+export type BackendStatus = { 'degraded' : null } |
+  { 'offline' : null } |
+  { 'online' : null };
+export interface BlobMetadata {
+  'mimeType' : string,
+  'filename' : string,
+  'sizeBytes' : bigint,
+}
 export type DownloadResponse = {
     'ok' : {
       'originalFileName' : string,
@@ -31,13 +36,20 @@ export interface ExistingSubmission {
   'course' : string,
 }
 export type ExternalBlob = Uint8Array;
+export interface HealthStatus {
+  'backendStatus' : BackendStatus,
+  'backendVersion' : string,
+}
 export type MediaType = { 'audio' : null } |
   { 'video' : null };
 export interface Submission {
   'id' : bigint,
   'media' : ExternalBlob,
+  'downloadFilename' : string,
   'studentId' : string,
+  'originalFilename' : string,
   'assessment' : string,
+  'metadata' : BlobMetadata,
   'submittedBy' : [] | [Principal],
   'mediaType' : MediaType,
   'course' : string,
@@ -77,26 +89,25 @@ export interface _SERVICE {
   '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'adminCreateSubmission' : ActorMethod<
-    [string, string, string, ExternalBlob, MediaType],
+    [string, string, string, ExternalBlob, BlobMetadata, MediaType],
     undefined
   >,
   'adminDeleteSubmissionById' : ActorMethod<[bigint], undefined>,
   'adminDeleteSubmissionByStudentId' : ActorMethod<[string, string], undefined>,
   'adminDownloadSubmission' : ActorMethod<[bigint], DownloadResponse>,
-  'adminLogin' : ActorMethod<[AdminLoginRequest], AdminLoginResponse>,
-  'adminLogout' : ActorMethod<[], undefined>,
   'adminSubmissions' : ActorMethod<[string], Array<ExistingSubmission>>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'checkHealth' : ActorMethod<[], HealthStatus>,
   'createSubmission' : ActorMethod<
-    [string, string, string, ExternalBlob, MediaType],
+    [string, string, string, ExternalBlob, BlobMetadata, MediaType],
     undefined
   >,
   'getAllSubmissions' : ActorMethod<[], Array<Submission>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getServerTime' : ActorMethod<[], [] | [Time]>,
-  'getSessionRole' : ActorMethod<[], [] | [string]>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
+  'getVersion' : ActorMethod<[], string>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'listSubmissions' : ActorMethod<[], Array<Submission>>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,

@@ -1,47 +1,74 @@
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
-import type { ExternalBlob, MediaType } from '../../backend';
+import { useState } from 'react';
+import { ExternalBlob, MediaType } from '../../backend';
+import { normalizeMimeType, getExtensionFromMimeType } from '../../lib/mediaMime';
 
 interface AdminMediaDownloadButtonProps {
-  media: ExternalBlob;
+  mediaBlob: ExternalBlob;
   mediaType: MediaType;
-  filename: string;
+  fileName?: string;
+  mimeType?: string;
+  variant?: 'default' | 'outline' | 'ghost';
+  size?: 'default' | 'sm' | 'lg' | 'icon';
 }
 
-export default function AdminMediaDownloadButton({ 
-  media, 
-  mediaType, 
-  filename 
+export default function AdminMediaDownloadButton({
+  mediaBlob,
+  mediaType,
+  fileName,
+  mimeType,
+  variant = 'outline',
+  size = 'sm',
 }: AdminMediaDownloadButtonProps) {
   const [isDownloading, setIsDownloading] = useState(false);
 
   const handleDownload = async () => {
+    setIsDownloading(true);
     try {
-      setIsDownloading(true);
+      const bytes = await mediaBlob.getBytes();
       
-      // Get media bytes
-      const bytes = await media.getBytes();
+      // Determine MIME type based on provided info or media type
+      let finalMimeType: string;
       
-      // Determine MIME type based on media type
-      const mimeType = mediaType === 'audio' ? 'audio/webm' : 'video/webm';
-      const blob = new Blob([bytes], { type: mimeType });
+      if (mimeType) {
+        // Use provided MIME type
+        finalMimeType = normalizeMimeType(mimeType);
+      } else if (fileName) {
+        // Infer from filename extension
+        const ext = fileName.split('.').pop()?.toLowerCase();
+        if (mediaType === MediaType.audio) {
+          if (ext === 'webm') finalMimeType = 'audio/webm';
+          else if (ext === 'ogg') finalMimeType = 'audio/ogg';
+          else if (ext === 'wav') finalMimeType = 'audio/wav';
+          else if (ext === 'm4a') finalMimeType = 'audio/mp4';
+          else finalMimeType = 'audio/mpeg'; // default to mp3
+        } else {
+          finalMimeType = 'video/mp4';
+        }
+      } else {
+        // Fallback defaults
+        finalMimeType = mediaType === MediaType.audio ? 'audio/mpeg' : 'video/mp4';
+      }
       
-      // Create download link
+      const blob = new Blob([bytes], { type: finalMimeType });
       const url = URL.createObjectURL(blob);
+      
       const link = document.createElement('a');
       link.href = url;
-      link.download = filename;
+      
+      // Use provided filename or generate one with correct extension
+      const defaultExt = getExtensionFromMimeType(finalMimeType);
+      const defaultName = mediaType === MediaType.audio ? `audio.${defaultExt}` : `video.${defaultExt}`;
+      link.download = fileName || defaultName;
+      
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(url);
       
-      toast.success(`${mediaType === 'audio' ? 'Audio' : 'Video'} file downloaded successfully`);
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Download failed:', error);
-      toast.error(`Failed to download ${mediaType} file. Please try again.`);
     } finally {
       setIsDownloading(false);
     }
@@ -49,9 +76,10 @@ export default function AdminMediaDownloadButton({
 
   return (
     <Button
+      variant={variant}
+      size={size}
       onClick={handleDownload}
       disabled={isDownloading}
-      variant="outline"
     >
       {isDownloading ? (
         <>
@@ -61,7 +89,7 @@ export default function AdminMediaDownloadButton({
       ) : (
         <>
           <Download className="h-4 w-4 mr-2" />
-          Download {mediaType === 'audio' ? 'Audio' : 'Video'}
+          Download {mediaType === MediaType.audio ? 'Audio' : 'Video'}
         </>
       )}
     </Button>
