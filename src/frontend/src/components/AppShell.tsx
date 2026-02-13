@@ -1,27 +1,33 @@
 import { Link, useLocation } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
-import { useIsAdmin } from '../hooks/useQueries';
+import { useIsAdmin, useBackendHealth } from '../hooks/useQueries';
 import { Music, Settings, FileText } from 'lucide-react';
+import RuntimeIcConfigDebug from './RuntimeIcConfigDebug';
+import CanisterIdBanner from './CanisterIdBanner';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { data: isAdmin } = useIsAdmin();
+  
+  // Trigger health check on app load
+  useBackendHealth();
 
-  // Hide header and footer on success page
+  // Hide header and footer on success page, but always show canister banner
   const isSuccessPage = location.pathname === '/success';
 
   if (isSuccessPage) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pb-8">
         <main className="container mx-auto px-4 py-8">
           {children}
         </main>
+        <CanisterIdBanner />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col pb-8">
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -63,7 +69,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </main>
 
       <footer className="border-t bg-card mt-auto">
-        <div className="container mx-auto px-4 py-6">
+        <div className="container mx-auto px-4 py-6 space-y-4">
+          {/* Debug display - temporary for verification */}
+          <RuntimeIcConfigDebug />
+          
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
             <p>© {new Date().getFullYear()} AudioDrop. All rights reserved.</p>
             <p>
@@ -82,6 +91,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </footer>
+
+      <CanisterIdBanner />
     </div>
   );
 }

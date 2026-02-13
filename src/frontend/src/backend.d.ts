@@ -14,11 +14,6 @@ export class ExternalBlob {
     static fromBytes(blob: Uint8Array<ArrayBuffer>): ExternalBlob;
     withUploadProgress(onProgress: (percentage: number) => void): ExternalBlob;
 }
-export type Time = bigint;
-export interface HealthStatus {
-    backendStatus: BackendStatus;
-    backendVersion: string;
-}
 export type DownloadResponse = {
     __kind__: "ok";
     ok: {
@@ -34,6 +29,7 @@ export type DownloadResponse = {
     __kind__: "notFound";
     notFound: string;
 };
+export type Time = bigint;
 export interface ExistingSubmission {
     id: bigint;
     studentId: string;
@@ -63,11 +59,6 @@ export interface UserProfile {
     name: string;
     email?: string;
 }
-export enum BackendStatus {
-    degraded = "degraded",
-    offline = "offline",
-    online = "online"
-}
 export enum MediaType {
     audio = "audio",
     video = "video"
@@ -84,7 +75,6 @@ export interface backendInterface {
     adminDownloadSubmission(id: bigint): Promise<DownloadResponse>;
     adminSubmissions(studentId: string): Promise<Array<ExistingSubmission>>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
-    checkHealth(): Promise<HealthStatus>;
     createSubmission(studentId: string, course: string, assessment: string, media: ExternalBlob, metadata: BlobMetadata, mediaType: MediaType): Promise<void>;
     getAllSubmissions(): Promise<Array<Submission>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
@@ -92,6 +82,7 @@ export interface backendInterface {
     getServerTime(): Promise<Time | null>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     getVersion(): Promise<string>;
+    health(): Promise<string>;
     isCallerAdmin(): Promise<boolean>;
     listSubmissions(): Promise<Array<Submission>>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;

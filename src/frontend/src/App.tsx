@@ -1,4 +1,6 @@
 import { createRouter, RouterProvider, createRoute, createRootRoute, Outlet } from '@tanstack/react-router';
+import { useEffect } from 'react';
+import { toast } from 'sonner';
 import StudentUploadPage from './pages/StudentUploadPage';
 import SubmissionSuccessPage from './pages/SubmissionSuccessPage';
 import AdminLoginPage from './pages/admin/AdminLoginPage';
@@ -10,16 +12,54 @@ import AdminRouteGuard from './components/AdminRouteGuard';
 import AppShell from './components/AppShell';
 import { Toaster } from '@/components/ui/sonner';
 import { ThemeProvider } from 'next-themes';
+import { checkHealth } from './ic/actor';
+import { getBackendCanisterId } from './config/canisters';
 
-const rootRoute = createRootRoute({
-  component: () => (
+function RootLayout() {
+  useEffect(() => {
+    // Perform automatic health check on app load with enhanced diagnostics
+    const performHealthCheck = async () => {
+      const canisterId = getBackendCanisterId();
+      
+      try {
+        console.log('[App] Performing initial backend health check...');
+        console.log('[App] Using canister ID:', canisterId);
+        
+        const result = await checkHealth();
+        
+        if (!result.online) {
+          console.error('[App] Backend health check failed:', result.error);
+          toast.error('Backend connection issue', {
+            description: `${result.error || 'Unable to connect to backend'}`,
+            duration: 10000,
+          });
+        } else {
+          console.log('[App] ✓ Backend health check passed - application ready');
+        }
+      } catch (error) {
+        console.error('[App] Health check error:', error);
+        toast.error('Backend connection error', {
+          description: `Failed to verify backend connectivity (Canister: ${canisterId})`,
+          duration: 10000,
+        });
+      }
+    };
+
+    performHealthCheck();
+  }, []);
+
+  return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <AppShell>
         <Outlet />
       </AppShell>
       <Toaster />
     </ThemeProvider>
-  ),
+  );
+}
+
+const rootRoute = createRootRoute({
+  component: RootLayout,
 });
 
 const indexRoute = createRoute({

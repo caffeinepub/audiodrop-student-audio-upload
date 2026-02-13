@@ -1,95 +1,108 @@
 {
   "kind": "build_request",
-  "title": "Fix deployed app showing “Backend Offline” by initializing IC actor from generated declarations and gating submit on health check",
-  "priority": "high",
+  "title": "Fix frontend backend canister ID mismatch and centralize canister config",
+  "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Update frontend backend-actor initialization to always use the generated canister declarations import (no dynamic require/eval and no environment-variable canister ID lookup):\n- Import `idlFactory` and `canisterId` from `declarations/backend`\n- Create the `HttpAgent` with host `https://icp0.io` for deployed (and keep local replica host for dev)\n- Create the actor via `Actor.createActor(idlFactory, { agent, canisterId })`\n- Remove any environment-variable-based canister lookup and any dynamic `require`/`eval` canisterId resolution paths",
+      "text": "Replace the outdated backend canister ID currently hardcoded as \"bd3sg-teaaa-aaaaa-qaaba-cai\" with the CURRENT deployed backend canister ID from the project backend settings, and ensure this value is used for all Internet Computer backend actor creation and health checks.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-user"
+          "msg-1"
         ],
         "quotes": [
-          "Ensure actor is created using generated declarations:\n   import { Actor, HttpAgent } from \"@dfinity/agent\"\n   import { idlFactory, canisterId } from \"declarations/backend\"",
-          "Do NOT hardcode canisterId.\n   Use the exported canisterId from declarations.",
-          "Remove any environment-variable-based canister lookup."
+          "Frontend is calling canister id \"bd3sg-teaaa-aaaaa-qaaba-cai\" and ICP returns canister_not_found.",
+          "Find and replace the backend canister ID constant so it uses the CURRENT deployed backend canister ID (from project backend settings)."
         ]
       },
       "acceptanceCriteria": [
-        "`frontend/src/lib/icActor.ts` (and any other actor-creation code paths) imports `idlFactory` and `canisterId` from `declarations/backend` and does not read canister IDs from `import.meta.env`.",
-        "The deployed frontend uses `https://icp0.io` as the agent host (local dev continues to use the local replica host).",
-        "No code path hardcodes a canister ID string; only the `canisterId` export from `declarations/backend` is used.",
-        "App no longer relies on `eval('require')` or similar runtime module loading to find `canisterId`."
+        "The hardcoded canister id \"bd3sg-teaaa-aaaaa-qaaba-cai\" no longer appears anywhere in the frontend source.",
+        "The canister id used by actor creation and health checks matches the CURRENT deployed backend canister ID from project backend settings.",
+        "App load health check succeeds without returning canister_not_found."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Ensure backend actor creation runs only after the browser window has loaded by wrapping actor initialization in an async init flow and gating all calls to `getBackendActor()` behind that initialization (e.g., wait for `window.load` before creating/caching the actor).",
+      "text": "Create a single shared canister configuration source file (e.g., frontend/src/config/canisters.ts) that exports the active backend canister ID, and refactor all backend call sites (student submit flow, admin dashboard/submission flows, and health checks) to read the canister ID from this shared source (no duplicated constants).",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-user"
+          "msg-1"
         ],
         "quotes": [
-          "Ensure this actor creation runs only after window loads.\n   Wrap in async init function."
+          "Ensure ALL backend calls (student submit + admin dashboard) use the SAME canister ID from a single source file (e.g., src/config/canisters.ts)."
         ]
       },
       "acceptanceCriteria": [
-        "On a deployed build, actor creation does not run until after the `window` load event fires.",
-        "Calls that need the actor (e.g., submission creation and health check) wait for initialization rather than receiving `undefined`/null actor values or failing due to premature initialization.",
-        "No runtime errors occur on first page load related to actor initialization order."
+        "A single config module exists that exports the active backend canister ID.",
+        "frontend/src/ic/actor.ts uses the shared config module instead of a local CANISTER_ID constant.",
+        "Any other actor creation path used by the app (including the path used by frontend/src/hooks/useActor.ts via its actor factory import) uses the same shared canister ID source.",
+        "Student submission and admin dashboard data fetches use the same canister id (verified by code inspection and runtime banner)."
       ]
     },
     {
       "id": "REQ-3",
-      "text": "Add/confirm a lightweight backend health check runs on initial page load and drives the UI state:\n- On load, call a simple backend method (prefer `getVersion()` if available; otherwise `ping()` is acceptable)\n- If the call succeeds, allow submission (Submit enabled)\n- If the call fails, show the user-facing text \"Backend Offline\" and prevent submission attempts until healthy",
-      "target": "both",
+      "text": "Remove any stale/old backend canister IDs hardcoded elsewhere in the frontend so there are no conflicting canister IDs in runtime code paths (including deprecated wrappers).",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-user"
+          "msg-1"
         ],
         "quotes": [
-          "Add a small health check on page load:\n   await actor.getVersion() or any simple method.\n   If success → enable Submit.\n   If fail → show \"Backend Offline\"."
+          "Remove any stale/old canister IDs hardcoded elsewhere."
         ]
       },
       "acceptanceCriteria": [
-        "A health check is executed automatically when the student upload page loads (no manual user action required).",
-        "When the health check succeeds, the Submit button can be used (assuming other form validations pass).",
-        "When the health check fails, the UI shows exactly \"Backend Offline\" (English) and submission is blocked with a clear error.",
-        "If `getVersion()` is used, the backend canister exposes it and it can be called as a simple health probe; otherwise `ping()` remains functional and used consistently."
+        "No frontend module contains a hardcoded backend canister ID other than the single shared config source.",
+        "Deprecated helper modules (e.g., frontend/src/lib/icActor.ts) do not introduce a different canister id than the shared config."
       ]
     },
     {
       "id": "REQ-4",
-      "text": "Ensure the deployed user flow works end-to-end: `createSubmission` must succeed on the deployed site using the initialized actor from declarations, and the \"Backend Offline\" banner must not appear when the backend is reachable.",
+      "text": "Add a small, always-visible runtime banner in the UI that displays the active backend canister ID being used (read from the single shared config source) to allow verification without DevTools.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-user"
+          "msg-1"
         ],
         "quotes": [
-          "Deliverable:\nSubmit works on deployed site.\nNo \"Backend Offline\" banner."
+          "Add a small banner showing the active canister id at runtime for verification."
         ]
       },
       "acceptanceCriteria": [
-        "On the deployed site, a healthy backend does not show the \"Backend Offline\" banner.",
-        "On the deployed site, submitting a valid audio submission successfully calls `createSubmission` and reaches the success screen.",
-        "No actor-related initialization errors occur in the browser console during the submission flow."
+        "The UI displays a small banner showing the active backend canister ID at runtime.",
+        "The banner’s value is sourced from the same shared canister config module used for actor creation.",
+        "When the configured canister id is corrected, the banner shows the corrected value and backend calls succeed (no canister_not_found)."
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "text": "Verify end-to-end behavior: the initial health check, student submission, and admin dashboard/submission views perform backend calls successfully without any \"canister_not_found\" errors.",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "Deliverable:\nHealth check succeeds and submit works with no canister_not_found."
+        ]
+      },
+      "acceptanceCriteria": [
+        "On app load, the health check returns online/ok (no canister_not_found).",
+        "Student submit completes successfully and reaches the success page without canister_not_found.",
+        "Admin dashboard loads submissions (or returns a permission-related error if unauthorized) without canister_not_found."
       ]
     }
   ],
   "constraints": [
-    "Do not hardcode canister IDs anywhere; use only `canisterId` exported by `declarations/backend`.",
-    "Remove environment-variable-based canister lookup for the backend canister ID.",
-    "All user-facing text introduced/modified by this change must be in English.",
-    "Do not edit files under `frontend/src/hooks/useInternetIdentity.ts`, `frontend/src/hooks/useInternetIdentity.tsx`, `frontend/src/hooks/useActor.ts`, `frontend/src/main.tsx`, or `frontend/src/components/ui`."
+    "Frontend immutable paths must not be edited: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui.",
+    "Keep all Motoko logic in the single backend actor (backend/main.mo); only introduce a migration file if a stable state schema change is required (not expected for this fix)."
   ],
   "nonGoals": [
-    "Adding new authentication providers (only Internet Identity is supported).",
-    "Introducing external databases or non-IC hosting/deployment changes.",
-    "Implementing real-time communication features (websockets/push)."
+    "Do not add new authentication providers or change the Internet Identity integration.",
+    "Do not change backend data models or submission logic beyond what is necessary to validate connectivity (the primary fix is frontend canister id configuration).",
+    "Do not add localhost/dev replica support; this fix targets the currently deployed backend canister."
   ],
   "imageRequirements": {
     "required": [],

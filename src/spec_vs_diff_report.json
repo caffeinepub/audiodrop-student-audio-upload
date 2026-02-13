@@ -1,83 +1,80 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-12T01:53:00.947Z",
-  "summary": "REQ-2 and parts of REQ-3 appear implemented (window-load-gated actor init flow + health-check-driven submission gating). However REQ-1 is not implemented: frontend actor creation still uses env-var canister ID lookup and does not import canisterId from generated declarations. Several additional unrelated frontend/admin/security features and backend migration/version endpoints were introduced that were not requested.",
+  "generatedAt": "2026-02-13T01:01:14.425Z",
+  "summary": "The diff introduces a centralized canister config module and refactors actor creation/health checks to read from it, and adds an always-visible UI banner displaying the canister ID. However, the centralized config still contains the outdated canister ID string \"bd3sg-teaaa-aaaaa-qaaba-cai\", so the primary mismatch is not fixed and REQ-1/REQ-3 acceptance criteria are not met. End-to-end verification (REQ-5) is not evidenced by the diff.",
   "missing_requirements": [
     {
       "id": "REQ-1",
-      "requirement": "Update frontend backend-actor initialization to always use generated canister declarations import (import idlFactory and canisterId from `declarations/backend`) and remove any environment-variable canister ID lookup / dynamic resolution.",
-      "reason": "`frontend/src/lib/icActor.ts` still reads the backend canister ID from `import.meta.env` via `getCanisterId()` and imports `idlFactory` from `../backend.did` rather than importing `{ idlFactory, canisterId }` from `declarations/backend`.",
+      "requirement": "Replace the outdated backend canister ID currently hardcoded as \"bd3sg-teaaa-aaaaa-qaaba-cai\" with the CURRENT deployed backend canister ID from the project backend settings, and ensure this value is used for all Internet Computer backend actor creation and health checks.",
+      "reason": "The centralized config still exports BACKEND_CANISTER_ID = 'bd3sg-teaaa-aaaaa-qaaba-cai', so the outdated canister ID remains present and is still the value used by actor creation and health checks.",
       "evidence": [
-        "frontend/src/lib/icActor.ts"
+        "frontend/src/config/canisters.ts",
+        "frontend/src/ic/actor.ts",
+        "frontend/src/App.tsx"
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "requirement": "Remove any stale/old backend canister IDs hardcoded elsewhere in the frontend so there are no conflicting canister IDs in runtime code paths (including deprecated wrappers).",
+      "reason": "The stale/old canister ID \"bd3sg-teaaa-aaaaa-qaaba-cai\" still exists in the frontend source (in the new shared config). This fails the AC that the outdated ID no longer appears anywhere in frontend source and implies the runtime will still use the stale ID.",
+      "evidence": [
+        "frontend/src/config/canisters.ts"
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "requirement": "Verify end-to-end behavior: the initial health check, student submission, and admin dashboard/submission views perform backend calls successfully without any \"canister_not_found\" errors.",
+      "reason": "The diff shows code changes and enhanced logging/error messages, but provides no evidence of actual end-to-end verification or test execution. Additionally, because the outdated canister ID remains configured, the intended 'no canister_not_found' outcome is not demonstrated by the changes.",
+      "evidence": [
+        "frontend/src/config/canisters.ts",
+        "frontend/src/App.tsx",
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/pages/StudentUploadPage.tsx"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Backend state migration that drops `sessions` state.",
-      "reason": "Not requested by any REQ; BuildRequest focuses on frontend actor initialization and health-check gating.",
+      "description": "Added an extra runtime IC configuration debug card in the footer (RuntimeIcConfigDebug) beyond the requested small always-visible canister ID banner.",
+      "reason": "REQ-4 requests a small always-visible banner showing the canister ID; the diff also includes a separate debug component with host checks and additional diagnostics not requested.",
       "evidence": [
-        "backend/migration.mo",
-        "backend/main.mo"
+        "frontend/src/components/RuntimeIcConfigDebug.tsx",
+        "frontend/src/components/AppShell.tsx"
       ]
     },
     {
-      "description": "Backend adds new health/version APIs (`checkHealth()` returning structured status and `getVersion()` returning a hardcoded version string).",
-      "reason": "REQ-3 requests using `getVersion()` (or `ping()`) as a probe, but does not request adding new backend endpoints or hardcoding versions; diff introduces new endpoints and hardcoded version text.",
+      "description": "Introduced canister-id format validation utilities and status helpers (isValidCanisterId, getCanisterIdStatus).",
+      "reason": "The BuildRequest focuses on using the correct deployed canister ID and centralizing configuration; adding validation/status helpers is extra functionality not explicitly requested.",
       "evidence": [
-        "backend/main.mo"
+        "frontend/src/config/canisters.ts",
+        "frontend/src/components/CanisterIdBanner.tsx",
+        "frontend/src/components/RuntimeIcConfigDebug.tsx"
       ]
     },
     {
-      "description": "Admin UI expansion: header/nav links (Dashboard/Audit/Settings), Admin login page, and route/backward-compat notes.",
-      "reason": "Not part of the requested fix; BuildRequest non-goals include adding auth providers but does not request new admin screens/navigation.",
+      "description": "Enhanced/added extensive console logging and diagnostic error messaging for health checks and various queries.",
+      "reason": "The request is to fix the canister ID mismatch and centralize configuration; the additional diagnostic logging and specialized canister_not_found handling goes beyond the stated requirements.",
       "evidence": [
-        "frontend/src/components/AppShell.tsx",
-        "frontend/src/pages/admin/AdminLoginPage.tsx",
-        "frontend-file-summaries.txt (App.tsx, AdminRouteGuard, admin components)"
-      ]
-    },
-    {
-      "description": "CAPTCHA feature on student upload flow (LocalCaptchaChallenge, captcha gating).",
-      "reason": "Not requested by any REQ; the fix request is specifically about actor init + backend health gating.",
-      "evidence": [
-        "frontend/src/pages/StudentUploadPage.tsx",
-        "frontend-file-summaries.txt (LocalCaptchaChallenge, StudentUploadPage)"
-      ]
-    },
-    {
-      "description": "Audio recorder rework to capture native browser format and avoid MP3 conversion.",
-      "reason": "Not requested by any REQ; unrelated to backend-offline/actor initialization problem.",
-      "evidence": [
-        "frontend-file-summaries.txt (frontend/src/components/AudioRecorder.tsx, frontend/src/hooks/useAudioRecorder.ts)"
-      ]
-    },
-    {
-      "description": "Added general security/utilities: XSS safe text helpers and CSRF token helpers.",
-      "reason": "Not requested by any REQ; unrelated scope expansion.",
-      "evidence": [
-        "frontend-file-summaries.txt (frontend/src/lib/safeText.ts, frontend/src/lib/csrf.ts)"
-      ]
-    },
-    {
-      "description": "Admin export tools (CSV export + ZIP placeholder).",
-      "reason": "Not requested by any REQ; unrelated to deployed actor initialization and health check gating.",
-      "evidence": [
-        "frontend-file-summaries.txt (frontend/src/components/admin/ExportTools.tsx)"
+        "frontend/src/App.tsx",
+        "frontend/src/ic/actor.ts",
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/pages/StudentUploadPage.tsx"
       ]
     }
   ],
-  "confidence": 0.72,
+  "confidence": 0.78,
   "changed_files": [
-    "backend/main.mo",
-    "backend/migration.mo",
     "frontend-file-summaries.txt",
+    "frontend/src/App.tsx",
     "frontend/src/components/AppShell.tsx",
+    "frontend/src/components/CanisterIdBanner.tsx",
+    "frontend/src/components/RuntimeIcConfigDebug.tsx",
+    "frontend/src/config/canisters.ts",
     "frontend/src/hooks/useQueries.ts",
+    "frontend/src/ic/actor.ts",
     "frontend/src/lib/icActor.ts",
     "frontend/src/pages/StudentUploadPage.tsx",
-    "frontend/src/pages/admin/AdminLoginPage.tsx",
     "project_state.json"
   ]
 }

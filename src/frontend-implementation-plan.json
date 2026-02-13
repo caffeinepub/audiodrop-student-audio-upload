@@ -1,96 +1,120 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix deployed “Backend Offline” by using generated declarations actor init and load-gated health check",
+  "title": "Centralize backend canister ID configuration and fix frontend canister ID mismatch",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Initialize backend actor using generated declarations import with correct deployed host and no env/dynamic canister ID resolution.",
+      "summary": "Replace the outdated hardcoded backend canister ID with the current deployed canister ID and ensure all actor creation and health checks use it.",
       "acceptanceCriteria": [
-        "`frontend/src/lib/icActor.ts` (and any other actor-creation code paths) imports `idlFactory` and `canisterId` from `declarations/backend` and does not read canister IDs from `import.meta.env`.",
-        "The deployed frontend uses `https://icp0.io` as the agent host (local dev continues to use the local replica host).",
-        "No code path hardcodes a canister ID string; only the `canisterId` export from `declarations/backend` is used.",
-        "App no longer relies on `eval('require')` or similar runtime module loading to find `canisterId`."
+        "The hardcoded canister id \"bd3sg-teaaa-aaaaa-qaaba-cai\" no longer appears anywhere in the frontend source.",
+        "The canister id used by actor creation and health checks matches the CURRENT deployed backend canister ID from project backend settings.",
+        "App load health check succeeds without returning canister_not_found."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/lib/icActor.ts",
+          "path": "frontend/src/ic/actor.ts",
           "operation": "modify",
-          "description": "Replace canister-id resolution (remove eval/require and all import.meta.env lookups) by statically importing `idlFactory` and `canisterId` from `declarations/backend`; update agent host selection to use local replica host in dev and `https://icp0.io` when deployed; create the actor via `Actor.createActor(idlFactory, { agent, canisterId })` with no hardcoded IDs."
+          "description": "Remove the hardcoded CANISTER_ID value and instead read the active backend canister ID from the shared canister config module; ensure createBackendActor(), getAnonymousActor(), getCanisterId(), and checkHealth() all use the shared configured ID (matching the current deployed backend canister ID from project backend settings)."
         },
         {
-          "path": "frontend/src/hooks/useQueries.ts",
+          "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Align any direct actor creation/calls used for student submission and health probing to rely solely on `getBackendActor()` from `frontend/src/lib/icActor.ts` after it is updated to use generated declarations, ensuring no alternate canister ID resolution paths remain."
+          "description": "Update initial app-load health check diagnostics (logging/toast description) to include the active backend canister ID from the shared canister config so mismatches can be identified quickly during runtime verification."
         }
       ]
     },
     {
       "id": "REQ-2",
-      "summary": "Defer actor creation until after window load and ensure all backend calls await the initialization flow.",
+      "summary": "Create a single shared canister configuration module and refactor all backend call sites to use it (no duplicated constants).",
       "acceptanceCriteria": [
-        "On a deployed build, actor creation does not run until after the `window` load event fires.",
-        "Calls that need the actor (e.g., submission creation and health check) wait for initialization rather than receiving `undefined`/null actor values or failing due to premature initialization.",
-        "No runtime errors occur on first page load related to actor initialization order."
+        "A single config module exists that exports the active backend canister ID.",
+        "frontend/src/ic/actor.ts uses the shared config module instead of a local CANISTER_ID constant.",
+        "Any other actor creation path used by the app (including the path used by frontend/src/hooks/useActor.ts via its actor factory import) uses the same shared canister ID source.",
+        "Student submission and admin dashboard data fetches use the same canister id (verified by code inspection and runtime banner)."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/lib/icActor.ts",
+          "path": "frontend/src/config/canisters.ts",
+          "operation": "create",
+          "description": "Create a single shared canister configuration module that exports the active backend canister ID (set to the CURRENT deployed backend canister ID from project backend settings) and any small helpers needed by the UI/actor factory to read it consistently."
+        },
+        {
+          "path": "frontend/src/ic/actor.ts",
           "operation": "modify",
-          "description": "Introduce an async initialization gate that waits for the browser `window` load event before creating/caching the actor; ensure `getBackendActor()` always awaits this init gate so all callers (health checks and submission creation) are safely sequenced."
+          "description": "Import the backend canister ID from frontend/src/config/canisters.ts and use it as the single source of truth for actor creation and health checks; ensure the exported canister ID accessor is sourced from the shared config."
+        },
+        {
+          "path": "frontend/src/components/RuntimeIcConfigDebug.tsx",
+          "operation": "modify",
+          "description": "Refactor the debug UI to read the backend canister ID from frontend/src/config/canisters.ts (not from ic/actor.ts) so the displayed value is guaranteed to match the single shared config source used for actor creation."
         }
       ]
     },
     {
       "id": "REQ-3",
-      "summary": "Run a lightweight health check on student upload page load and gate submission/UI state on the result, showing “Backend Offline” on failure.",
+      "summary": "Remove stale/old backend canister IDs from the frontend to prevent conflicting runtime code paths.",
       "acceptanceCriteria": [
-        "A health check is executed automatically when the student upload page loads (no manual user action required).",
-        "When the health check succeeds, the Submit button can be used (assuming other form validations pass).",
-        "When the health check fails, the UI shows exactly \"Backend Offline\" (English) and submission is blocked with a clear error.",
-        "If `getVersion()` is used, the backend canister exposes it and it can be called as a simple health probe; otherwise `ping()` remains functional and used consistently."
+        "No frontend module contains a hardcoded backend canister ID other than the single shared canister config source.",
+        "Deprecated helper modules (e.g., frontend/src/lib/icActor.ts) do not introduce a different canister id than the shared config."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Update the `useBackendHealth` query to use a lightweight backend method as the probe (prefer `getVersion()` per available declarations) and to treat failures as unhealthy without throwing unhandled errors; ensure it awaits `getBackendActor()` (which is load-gated per REQ-2)."
-        },
-        {
-          "path": "frontend/src/pages/StudentUploadPage.tsx",
-          "operation": "modify",
-          "description": "Ensure the health check runs on initial page load via the existing `useBackendHealth()` usage; gate form validity and submit attempts on a confirmed healthy state; update the offline banner text to exactly \"Backend Offline\" (matching capitalization) and update any offline toast/error text to English and consistent with the banner."
-        },
-        {
           "path": "frontend/src/lib/icActor.ts",
           "operation": "modify",
-          "description": "Align any shared health-check helper (if used) to the same probe method chosen in `useBackendHealth` (prefer `getVersion()`), so health checks are consistent and do not rely on non-existent methods."
+          "description": "Audit and update the deprecated wrapper to ensure it cannot introduce any canister ID constant or conflicting canister selection logic; keep it as a pure delegator to the shared actor factory that uses the shared canister config."
+        },
+        {
+          "path": "frontend/src/components/RuntimeIcConfigDebug.tsx",
+          "operation": "modify",
+          "description": "Remove any remaining references that could indirectly rely on a hardcoded canister ID (e.g., via ic/actor getters) and ensure the displayed canister ID is always derived directly from the shared canister config module."
         }
       ]
     },
     {
       "id": "REQ-4",
-      "summary": "Ensure deployed submission flow succeeds end-to-end using the declarations-based actor and no false “Backend Offline” banner when reachable.",
+      "summary": "Add an always-visible runtime banner showing the active backend canister ID sourced from the shared canister config.",
       "acceptanceCriteria": [
-        "On the deployed site, a healthy backend does not show the \"Backend Offline\" banner.",
-        "On the deployed site, submitting a valid audio submission successfully calls `createSubmission` and reaches the success screen.",
-        "No actor-related initialization errors occur in the browser console during the submission flow."
+        "The UI displays a small banner showing the active backend canister ID at runtime.",
+        "The banner’s value is sourced from the same shared canister config module used for actor creation.",
+        "When the configured canister id is corrected, the banner shows the corrected value and backend calls succeed (no canister_not_found)."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/pages/StudentUploadPage.tsx",
+          "path": "frontend/src/components/CanisterIdBanner.tsx",
+          "operation": "create",
+          "description": "Create a small, always-visible UI banner component that reads the active backend canister ID from frontend/src/config/canisters.ts and displays it in a compact, non-intrusive way suitable for runtime verification."
+        },
+        {
+          "path": "frontend/src/components/AppShell.tsx",
           "operation": "modify",
-          "description": "Tighten submission gating so submit is disabled until the health check has succeeded, and ensure the submit handler blocks attempts when unhealthy with a clear English error; keep navigation to the success screen on successful `createSubmission` mutation."
+          "description": "Wire the new CanisterIdBanner into the application layout so it is always visible across the app (including the success page layout that currently hides footer/header), ensuring the displayed ID matches the shared canister config source."
+        }
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "summary": "Verify end-to-end frontend behavior so health check, student submission, and admin dashboard views perform backend calls without canister_not_found.",
+      "acceptanceCriteria": [
+        "On app load, the health check returns online/ok (no canister_not_found).",
+        "Student submit completes successfully and reaches the success page without canister_not_found.",
+        "Admin dashboard loads submissions (or returns a permission-related error if unauthorized) without canister_not_found."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/ic/actor.ts",
+          "operation": "modify",
+          "description": "Improve health-check error reporting to explicitly surface canister_not_found scenarios alongside the active canister ID from the shared canister config, so end-to-end verification clearly indicates whether failures are due to configuration mismatch."
         },
         {
           "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Ensure `useCreateSubmission` relies on the updated `getBackendActor()` (declarations-based, load-gated) and surfaces actor/connection failures with clear English errors suitable for the student submission flow."
+          "description": "Add targeted handling for canister_not_found (and related agent/replica errors) in student submission and admin data-fetch flows to present a clear UI error message that includes the active canister ID (sourced from frontend/src/config/canisters.ts) for quick end-to-end verification."
         },
         {
-          "path": "frontend/src/lib/icActor.ts",
+          "path": "frontend/src/pages/StudentUploadPage.tsx",
           "operation": "modify",
-          "description": "Harden actor initialization error messages and caching behavior for the anonymous (student) flow so deployed builds consistently use the declarations-based canisterId and the correct agent host, preventing spurious offline states when the backend is reachable."
+          "description": "Ensure any surfaced backend connectivity errors during submission (including canister_not_found) are shown in a user-visible way and align with the shared canister ID banner for end-to-end verification."
         }
       ]
     }

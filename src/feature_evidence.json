@@ -2,11 +2,11 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-update-frontend-backend-actor-initialization-to-always-use-the-generated-canister-declarations-import-no-dynamic-require-eval-and-no-environment-variable-canister-id-lookup-import-idlfactory-and-canisterid-from-declarations-backend-create-the-httpagent-with-host-https-icp0-io-for-deployed-and-keep-local-replica-host-for-dev-create-the-actor-via-actor-createactor-idlfactory-agent-canisterid-remove-any-environment-variable-based-canister-lookup-and-any-dynamic-require-eval-canisterid-resolution-paths",
-      "featureTitle": "Update frontend backend-actor initialization to always use the generated canister declarations import (no dynamic require/eval and no environment-variable canister ID lookup):\n- Import `idlFactory` and `canisterId` from `declarations/backend`\n- Create the `HttpAgent` with host `https://icp0.io` for deployed (and keep local replica host for dev)\n- Create the actor via `Actor.createActor(idlFactory, { agent, canisterId })`\n- Remove any environment-variable-based canister lookup and any dynamic `require`/`eval` canisterId resolution paths",
+      "featureId": "feature-replace-the-outdated-backend-canister-id-currently-hardcoded-as-bd3sg-teaaa-aaaaa-qaaba-cai-with-the-current-deployed-backend-canister-id-from-the-project-backend-settings-and-ensure-this-value-is-used-for-all-internet-computer-backend-actor-creation-and-health-checks",
+      "featureTitle": "Replace the outdated backend canister ID currently hardcoded as \"bd3sg-teaaa-aaaaa-qaaba-cai\" with the CURRENT deployed backend canister ID from the project backend settings, and ensure this value is used for all Internet Computer backend actor creation and health checks.",
       "files": [
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/lib/icActor.ts"
+        "frontend/src/App.tsx",
+        "frontend/src/ic/actor.ts"
       ],
       "components": [
         "authorization@4.0.0",
@@ -23,10 +23,12 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-ensure-backend-actor-creation-runs-only-after-the-browser-window-has-loaded-by-wrapping-actor-initialization-in-an-async-init-flow-and-gating-all-calls-to-getbackendactor-behind-that-initialization-e-g-wait-for-window-load-before-creating-caching-the-actor",
-      "featureTitle": "Ensure backend actor creation runs only after the browser window has loaded by wrapping actor initialization in an async init flow and gating all calls to `getBackendActor()` behind that initialization (e.g., wait for `window.load` before creating/caching the actor).",
+      "featureId": "feature-create-a-single-shared-canister-configuration-source-file-e-g-frontend-src-config-canisters-ts-that-exports-the-active-backend-canister-id-and-refactor-all-backend-call-sites-student-submit-flow-admin-dashboard-submission-flows-and-health-checks-to-read-the-canister-id-from-this-shared-source-no-duplicated-constants",
+      "featureTitle": "Create a single shared canister configuration source file (e.g., frontend/src/config/canisters.ts) that exports the active backend canister ID, and refactor all backend call sites (student submit flow, admin dashboard/submission flows, and health checks) to read the canister ID from this shared source (no duplicated constants).",
       "files": [
-        "frontend/src/lib/icActor.ts"
+        "frontend/src/components/RuntimeIcConfigDebug.tsx",
+        "frontend/src/config/canisters.ts",
+        "frontend/src/ic/actor.ts"
       ],
       "components": [
         "authorization@4.0.0",
@@ -43,12 +45,11 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-add-confirm-a-lightweight-backend-health-check-runs-on-initial-page-load-and-drives-the-ui-state-on-load-call-a-simple-backend-method-prefer-getversion-if-available-otherwise-ping-is-acceptable-if-the-call-succeeds-allow-submission-submit-enabled-if-the-call-fails-show-the-user-facing-text-backend-offline-and-prevent-submission-attempts-until-healthy",
-      "featureTitle": "Add/confirm a lightweight backend health check runs on initial page load and drives the UI state:\n- On load, call a simple backend method (prefer `getVersion()` if available; otherwise `ping()` is acceptable)\n- If the call succeeds, allow submission (Submit enabled)\n- If the call fails, show the user-facing text \"Backend Offline\" and prevent submission attempts until healthy",
+      "featureId": "feature-remove-any-stale-old-backend-canister-ids-hardcoded-elsewhere-in-the-frontend-so-there-are-no-conflicting-canister-ids-in-runtime-code-paths-including-deprecated-wrappers",
+      "featureTitle": "Remove any stale/old backend canister IDs hardcoded elsewhere in the frontend so there are no conflicting canister IDs in runtime code paths (including deprecated wrappers).",
       "files": [
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/lib/icActor.ts",
-        "frontend/src/pages/StudentUploadPage.tsx"
+        "frontend/src/components/RuntimeIcConfigDebug.tsx",
+        "frontend/src/lib/icActor.ts"
       ],
       "components": [
         "authorization@4.0.0",
@@ -65,12 +66,11 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-ensure-the-deployed-user-flow-works-end-to-end-createsubmission-must-succeed-on-the-deployed-site-using-the-initialized-actor-from-declarations-and-the-backend-offline-banner-must-not-appear-when-the-backend-is-reachable",
-      "featureTitle": "Ensure the deployed user flow works end-to-end: `createSubmission` must succeed on the deployed site using the initialized actor from declarations, and the \"Backend Offline\" banner must not appear when the backend is reachable.",
+      "featureId": "feature-add-a-small-always-visible-runtime-banner-in-the-ui-that-displays-the-active-backend-canister-id-being-used-read-from-the-single-shared-config-source-to-allow-verification-without-devtools",
+      "featureTitle": "Add a small, always-visible runtime banner in the UI that displays the active backend canister ID being used (read from the single shared config source) to allow verification without DevTools.",
       "files": [
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/lib/icActor.ts",
-        "frontend/src/pages/StudentUploadPage.tsx"
+        "frontend/src/components/AppShell.tsx",
+        "frontend/src/components/CanisterIdBanner.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -83,6 +83,28 @@
       ],
       "testIds": [
         "REQ-4"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-verify-end-to-end-behavior-the-initial-health-check-student-submission-and-admin-dashboard-submission-views-perform-backend-calls-successfully-without-any-canister-not-found-errors",
+      "featureTitle": "Verify end-to-end behavior: the initial health check, student submission, and admin dashboard/submission views perform backend calls successfully without any \"canister_not_found\" errors.",
+      "files": [
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/ic/actor.ts",
+        "frontend/src/pages/StudentUploadPage.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-5"
       ],
       "confidence": "high"
     }

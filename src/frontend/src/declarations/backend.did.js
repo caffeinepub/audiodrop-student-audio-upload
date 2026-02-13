@@ -51,15 +51,6 @@ export const UserRole = IDL.Variant({
   'user' : IDL.Null,
   'guest' : IDL.Null,
 });
-export const BackendStatus = IDL.Variant({
-  'degraded' : IDL.Null,
-  'offline' : IDL.Null,
-  'online' : IDL.Null,
-});
-export const HealthStatus = IDL.Record({
-  'backendStatus' : BackendStatus,
-  'backendVersion' : IDL.Text,
-});
 export const Time = IDL.Int;
 export const Submission = IDL.Record({
   'id' : IDL.Nat,
@@ -125,7 +116,6 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
-  'checkHealth' : IDL.Func([], [HealthStatus], ['query']),
   'createSubmission' : IDL.Func(
       [IDL.Text, IDL.Text, IDL.Text, ExternalBlob, BlobMetadata, MediaType],
       [],
@@ -141,6 +131,7 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'getVersion' : IDL.Func([], [IDL.Text], ['query']),
+  'health' : IDL.Func([], [IDL.Text], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'listSubmissions' : IDL.Func([], [IDL.Vec(Submission)], ['query']),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
@@ -188,15 +179,6 @@ export const idlFactory = ({ IDL }) => {
     'admin' : IDL.Null,
     'user' : IDL.Null,
     'guest' : IDL.Null,
-  });
-  const BackendStatus = IDL.Variant({
-    'degraded' : IDL.Null,
-    'offline' : IDL.Null,
-    'online' : IDL.Null,
-  });
-  const HealthStatus = IDL.Record({
-    'backendStatus' : BackendStatus,
-    'backendVersion' : IDL.Text,
   });
   const Time = IDL.Int;
   const Submission = IDL.Record({
@@ -263,7 +245,6 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
-    'checkHealth' : IDL.Func([], [HealthStatus], ['query']),
     'createSubmission' : IDL.Func(
         [IDL.Text, IDL.Text, IDL.Text, ExternalBlob, BlobMetadata, MediaType],
         [],
@@ -279,6 +260,7 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'getVersion' : IDL.Func([], [IDL.Text], ['query']),
+    'health' : IDL.Func([], [IDL.Text], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'listSubmissions' : IDL.Func([], [IDL.Vec(Submission)], ['query']),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),

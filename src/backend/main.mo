@@ -12,9 +12,7 @@ import Storage "blob-storage/Storage";
 import MixinStorage "blob-storage/Mixin";
 import AccessControl "authorization/access-control";
 import MixinAuthorization "authorization/MixinAuthorization";
-import Migration "migration";
 
-(with migration = Migration.run)
 actor {
   public type MediaType = {
     #audio;
@@ -118,11 +116,8 @@ actor {
   var nextSubmissionId : Nat = 0;
 
   // Health check endpoint for front-end - accessible to all including guests
-  public query ({ caller }) func checkHealth() : async HealthStatus {
-    {
-      backendVersion = "v1.3";
-      backendStatus = #online;
-    };
+  public query ({ caller }) func health() : async Text {
+    "ok";
   };
 
   // Alternative health check name for compatibility
@@ -293,4 +288,3 @@ actor {
     nextSubmissionId += 1;
   };
 };
-

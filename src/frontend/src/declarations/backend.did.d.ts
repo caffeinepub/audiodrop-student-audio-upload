@@ -10,9 +10,6 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
-export type BackendStatus = { 'degraded' : null } |
-  { 'offline' : null } |
-  { 'online' : null };
 export interface BlobMetadata {
   'mimeType' : string,
   'filename' : string,
@@ -36,10 +33,6 @@ export interface ExistingSubmission {
   'course' : string,
 }
 export type ExternalBlob = Uint8Array;
-export interface HealthStatus {
-  'backendStatus' : BackendStatus,
-  'backendVersion' : string,
-}
 export type MediaType = { 'audio' : null } |
   { 'video' : null };
 export interface Submission {
@@ -97,7 +90,6 @@ export interface _SERVICE {
   'adminDownloadSubmission' : ActorMethod<[bigint], DownloadResponse>,
   'adminSubmissions' : ActorMethod<[string], Array<ExistingSubmission>>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
-  'checkHealth' : ActorMethod<[], HealthStatus>,
   'createSubmission' : ActorMethod<
     [string, string, string, ExternalBlob, BlobMetadata, MediaType],
     undefined
@@ -108,6 +100,7 @@ export interface _SERVICE {
   'getServerTime' : ActorMethod<[], [] | [Time]>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'getVersion' : ActorMethod<[], string>,
+  'health' : ActorMethod<[], string>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'listSubmissions' : ActorMethod<[], Array<Submission>>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,

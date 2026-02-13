@@ -1,45 +1,52 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "Internet Computer (DFINITY) web app where the frontend must initialize a backend canister actor correctly to avoid showing \"Backend Offline\" and allow createSubmission on the deployed site.",
+  "summary": "New project",
   "architectural_notes": [
-    "Initialize the backend canister actor using generated declarations (idlFactory + exported canisterId) via @dfinity/agent HttpAgent targeting https://icp0.io, and run initialization only after window load (async init).",
-    "Do not hardcode canisterId or use environment-variable-based canister lookup; rely on declarations export."
+    "Centralize backend canister ID in a single source of truth (e.g., src/config/canisters.ts) and ensure all frontend backend calls import from it; avoid hardcoded canister IDs elsewhere."
   ],
   "known_issues": [
-    "Deployed frontend shows \"Backend Offline\" and cannot call createSubmission due to actor being undefined or failing to initialize."
+    "Frontend is calling an outdated backend canister ID (bd3sg-teaaa-aaaaa-qaaba-cai), causing ICP canister_not_found errors."
   ],
   "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-update-frontend-backend-actor-initialization-to-always-use-the-generated-canister-declarations-import-no-dynamic-require-eval-and-no-environment-variable-canister-id-lookup-import-idlfactory-and-canisterid-from-declarations-backend-create-the-httpagent-with-host-https-icp0-io-for-deployed-and-keep-local-replica-host-for-dev-create-the-actor-via-actor-createactor-idlfactory-agent-canisterid-remove-any-environment-variable-based-canister-lookup-and-any-dynamic-require-eval-canisterid-resolution-paths",
-      "title": "Update frontend backend-actor initialization to always use the generated canister declarations import (no dynamic require/eval and no environment-variable canister ID lookup):\n- Import `idlFactory` and `canisterId` from `declarations/backend`\n- Create the `HttpAgent` with host `https://icp0.io` for deployed (and keep local replica host for dev)\n- Create the actor via `Actor.createActor(idlFactory, { agent, canisterId })`\n- Remove any environment-variable-based canister lookup and any dynamic `require`/`eval` canisterId resolution paths",
+      "id": "feature-replace-the-outdated-backend-canister-id-currently-hardcoded-as-bd3sg-teaaa-aaaaa-qaaba-cai-with-the-current-deployed-backend-canister-id-from-the-project-backend-settings-and-ensure-this-value-is-used-for-all-internet-computer-backend-actor-creation-and-health-checks",
+      "title": "Replace the outdated backend canister ID currently hardcoded as \"bd3sg-teaaa-aaaaa-qaaba-cai\" with the CURRENT deployed backend canister ID from the project backend settings, and ensure this value is used for all Internet Computer backend actor creation and health checks.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-ensure-backend-actor-creation-runs-only-after-the-browser-window-has-loaded-by-wrapping-actor-initialization-in-an-async-init-flow-and-gating-all-calls-to-getbackendactor-behind-that-initialization-e-g-wait-for-window-load-before-creating-caching-the-actor",
-      "title": "Ensure backend actor creation runs only after the browser window has loaded by wrapping actor initialization in an async init flow and gating all calls to `getBackendActor()` behind that initialization (e.g., wait for `window.load` before creating/caching the actor).",
+      "id": "feature-create-a-single-shared-canister-configuration-source-file-e-g-frontend-src-config-canisters-ts-that-exports-the-active-backend-canister-id-and-refactor-all-backend-call-sites-student-submit-flow-admin-dashboard-submission-flows-and-health-checks-to-read-the-canister-id-from-this-shared-source-no-duplicated-constants",
+      "title": "Create a single shared canister configuration source file (e.g., frontend/src/config/canisters.ts) that exports the active backend canister ID, and refactor all backend call sites (student submit flow, admin dashboard/submission flows, and health checks) to read the canister ID from this shared source (no duplicated constants).",
       "reqIds": [
         "REQ-2"
       ],
       "version": 1
     },
     {
-      "id": "feature-add-confirm-a-lightweight-backend-health-check-runs-on-initial-page-load-and-drives-the-ui-state-on-load-call-a-simple-backend-method-prefer-getversion-if-available-otherwise-ping-is-acceptable-if-the-call-succeeds-allow-submission-submit-enabled-if-the-call-fails-show-the-user-facing-text-backend-offline-and-prevent-submission-attempts-until-healthy",
-      "title": "Add/confirm a lightweight backend health check runs on initial page load and drives the UI state:\n- On load, call a simple backend method (prefer `getVersion()` if available; otherwise `ping()` is acceptable)\n- If the call succeeds, allow submission (Submit enabled)\n- If the call fails, show the user-facing text \"Backend Offline\" and prevent submission attempts until healthy",
+      "id": "feature-remove-any-stale-old-backend-canister-ids-hardcoded-elsewhere-in-the-frontend-so-there-are-no-conflicting-canister-ids-in-runtime-code-paths-including-deprecated-wrappers",
+      "title": "Remove any stale/old backend canister IDs hardcoded elsewhere in the frontend so there are no conflicting canister IDs in runtime code paths (including deprecated wrappers).",
       "reqIds": [
         "REQ-3"
       ],
       "version": 1
     },
     {
-      "id": "feature-ensure-the-deployed-user-flow-works-end-to-end-createsubmission-must-succeed-on-the-deployed-site-using-the-initialized-actor-from-declarations-and-the-backend-offline-banner-must-not-appear-when-the-backend-is-reachable",
-      "title": "Ensure the deployed user flow works end-to-end: `createSubmission` must succeed on the deployed site using the initialized actor from declarations, and the \"Backend Offline\" banner must not appear when the backend is reachable.",
+      "id": "feature-add-a-small-always-visible-runtime-banner-in-the-ui-that-displays-the-active-backend-canister-id-being-used-read-from-the-single-shared-config-source-to-allow-verification-without-devtools",
+      "title": "Add a small, always-visible runtime banner in the UI that displays the active backend canister ID being used (read from the single shared config source) to allow verification without DevTools.",
       "reqIds": [
         "REQ-4"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-verify-end-to-end-behavior-the-initial-health-check-student-submission-and-admin-dashboard-submission-views-perform-backend-calls-successfully-without-any-canister-not-found-errors",
+      "title": "Verify end-to-end behavior: the initial health check, student submission, and admin dashboard/submission views perform backend calls successfully without any \"canister_not_found\" errors.",
+      "reqIds": [
+        "REQ-5"
       ],
       "version": 1
     }
@@ -47,12 +54,12 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Add backend health-check on page load (e.g., actor.getVersion) to toggle Submit enabled state and show/hide \"Backend Offline\" banner.",
+      "summary": "Fix backend canister ID mismatch by centralizing current deployed backend canister ID in a single config file, removing stale hardcoded IDs, and adding a runtime banner showing active canister ID; ensure health check + submit/admin calls work without canister_not_found.",
       "reqIds": [],
       "status": "pending"
     }
   ],
-  "projectName": "Fix deployed app showing “Backend Offline” by initializing IC actor from generated declarations and gating submit on health check",
+  "projectName": "Fix frontend backend canister ID mismatch and centralize canister config",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

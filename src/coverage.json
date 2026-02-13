@@ -1,88 +1,100 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-12T01:53:00.950Z",
+  "generatedAt": "2026-02-13T01:01:14.428Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 4,
-    "implemented": 4,
+    "total": 5,
+    "implemented": 5,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Update frontend backend-actor initialization to always use the generated canister declarations import (no dynamic require/eval and no environment-variable canister ID lookup):\n- Import `idlFactory` and `canisterId` from `declarations/backend`\n- Create the `HttpAgent` with host `https://icp0.io` for deployed (and keep local replica host for dev)\n- Create the actor via `Actor.createActor(idlFactory, { agent, canisterId })`\n- Remove any environment-variable-based canister lookup and any dynamic `require`/`eval` canisterId resolution paths",
+        "summary": "Replace the outdated backend canister ID currently hardcoded as \"bd3sg-teaaa-aaaaa-qaaba-cai\" with the CURRENT deployed backend canister ID from the project backend settings, and ensure this value is used for all Internet Computer backend actor creation and health checks.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/lib/icActor.ts",
-          "frontend/src/hooks/useQueries.ts"
+          "frontend/src/ic/actor.ts",
+          "frontend/src/App.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/lib/icActor.ts",
-          "frontend/src/hooks/useQueries.ts"
+          "frontend/src/ic/actor.ts",
+          "frontend/src/App.tsx"
         ]
       },
       {
         "id": "REQ-2",
-        "summary": "Ensure backend actor creation runs only after the browser window has loaded by wrapping actor initialization in an async init flow and gating all calls to `getBackendActor()` behind that initialization (e.g., wait for `window.load` before creating/caching the actor).",
+        "summary": "Create a single shared canister configuration source file (e.g., frontend/src/config/canisters.ts) that exports the active backend canister ID, and refactor all backend call sites (student submit flow, admin dashboard/submission flows, and health checks) to read the canister ID from this shared source (no duplicated constants).",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/lib/icActor.ts"
+          "frontend/src/config/canisters.ts",
+          "frontend/src/ic/actor.ts",
+          "frontend/src/components/RuntimeIcConfigDebug.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/lib/icActor.ts"
+          "frontend/src/config/canisters.ts",
+          "frontend/src/ic/actor.ts",
+          "frontend/src/components/RuntimeIcConfigDebug.tsx"
         ]
       },
       {
         "id": "REQ-3",
-        "summary": "Add/confirm a lightweight backend health check runs on initial page load and drives the UI state:\n- On load, call a simple backend method (prefer `getVersion()` if available; otherwise `ping()` is acceptable)\n- If the call succeeds, allow submission (Submit enabled)\n- If the call fails, show the user-facing text \"Backend Offline\" and prevent submission attempts until healthy",
+        "summary": "Remove any stale/old backend canister IDs hardcoded elsewhere in the frontend so there are no conflicting canister IDs in runtime code paths (including deprecated wrappers).",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/StudentUploadPage.tsx",
-          "frontend/src/lib/icActor.ts"
+          "frontend/src/lib/icActor.ts",
+          "frontend/src/components/RuntimeIcConfigDebug.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/StudentUploadPage.tsx",
-          "frontend/src/lib/icActor.ts"
+          "frontend/src/lib/icActor.ts",
+          "frontend/src/components/RuntimeIcConfigDebug.tsx"
         ]
       },
       {
         "id": "REQ-4",
-        "summary": "Ensure the deployed user flow works end-to-end: `createSubmission` must succeed on the deployed site using the initialized actor from declarations, and the \"Backend Offline\" banner must not appear when the backend is reachable.",
+        "summary": "Add a small, always-visible runtime banner in the UI that displays the active backend canister ID being used (read from the single shared config source) to allow verification without DevTools.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/pages/StudentUploadPage.tsx",
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/lib/icActor.ts"
+          "frontend/src/components/CanisterIdBanner.tsx",
+          "frontend/src/components/AppShell.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/pages/StudentUploadPage.tsx",
+          "frontend/src/components/CanisterIdBanner.tsx",
+          "frontend/src/components/AppShell.tsx"
+        ]
+      },
+      {
+        "id": "REQ-5",
+        "summary": "Verify end-to-end behavior: the initial health check, student submission, and admin dashboard/submission views perform backend calls successfully without any \"canister_not_found\" errors.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/ic/actor.ts",
           "frontend/src/hooks/useQueries.ts",
-          "frontend/src/lib/icActor.ts"
+          "frontend/src/pages/StudentUploadPage.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/ic/actor.ts",
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/pages/StudentUploadPage.tsx"
         ]
       }
     ]
   },
   "changedFiles": [
-    "backend/main.mo",
-    "backend/migration.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/backend.d.ts",
-    "frontend/src/backend.ts",
+    "frontend/src/App.tsx",
     "frontend/src/components/AppShell.tsx",
-    "frontend/src/declarations-backend.d.ts",
-    "frontend/src/declarations/backend.did.d.ts",
-    "frontend/src/declarations/backend.did.js",
+    "frontend/src/components/CanisterIdBanner.tsx",
+    "frontend/src/components/RuntimeIcConfigDebug.tsx",
+    "frontend/src/config/canisters.ts",
     "frontend/src/hooks/useQueries.ts",
+    "frontend/src/ic/actor.ts",
     "frontend/src/lib/icActor.ts",
     "frontend/src/pages/StudentUploadPage.tsx",
-    "frontend/src/pages/admin/AdminLoginPage.tsx",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",
